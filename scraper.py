@@ -166,7 +166,7 @@ async def main():
         # Process each configuration
         for config in configs:
             user_id = config["user_id"]
-            username = config.get("profiles", {}).get("username", "Unknown")
+            username = config.get("user_id", "Unknown")[:8]
 
             try:
                 new_jobs = await scrape_for_user(user_id, config)
