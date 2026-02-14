@@ -19,7 +19,7 @@ st.set_page_config(
 @st.cache_resource
 def init_supabase():
     url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_ANON_KEY"]  # Frontend uses anon key
+    key = st.secrets["SUPABASE_ANON_KEY"]
     return create_client(url, key)
 
 supabase: Client = init_supabase()
@@ -31,17 +31,31 @@ st.markdown("""
         font-size: 3rem;
         font-weight: bold;
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
     }
     .subtitle {
         text-align: center;
         color: #666;
         margin-bottom: 2rem;
     }
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        color: white;
+        text-align: center;
+    }
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .stat-label {
+        font-size: 1rem;
+        opacity: 0.9;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# Authentication Functions
 def login_page():
     """Login page UI"""
     st.markdown('<div class="main-header">🌪️ Zephyr</div>', unsafe_allow_html=True)
@@ -94,236 +108,214 @@ def login_page():
                                 }
                             }
                         })
+                        
+                        # Create profile entry
+                        if response.user:
+                            supabase.table("profiles").insert({
+                                "id": response.user.id,
+                                "username": username,
+                                "full_name": full_name
+                            }).execute()
 
                         st.success("✅ Account created! Please check your email to verify, then login.")
                     except Exception as e:
                         st.error(f"❌ Signup failed: {str(e)}")
 
 def main_app():
-    """Main application UI (after login)"""
-    user = st.session_state["user"]
-    user_id = user.id
+    """Main application UI"""
+    user = st.session_state.get("user")
+    
+    if not user:
+        st.error("Session expired. Please login again.")
+        if st.button("Logout"):
+            st.session_state.clear()
+            st.rerun()
+        return
 
-    # Header
-    col1, col2, col3 = st.columns([2, 6, 2])
-    with col1:
-        st.markdown("## 🌪️ Zephyr")
-    with col2:
-        st.markdown(f"### Welcome, {user.email.split('@')[0]}!")
-    with col3:
+    # Sidebar
+    with st.sidebar:
+        st.markdown(f"### 👤 {user.email}")
+        
         if st.button("🚪 Logout"):
             supabase.auth.sign_out()
             st.session_state.clear()
             st.rerun()
 
-    st.markdown("---")
-
-    # Sidebar: Manage Search Configs
-    with st.sidebar:
-        st.header("⚙️ Job Searches")
-
-        # Add new search
-        with st.expander("➕ Add New Search", expanded=False):
-            with st.form("add_search"):
-                keywords = st.text_input("Keywords*", placeholder="e.g., data engineer")
-                location = st.text_input("Location*", placeholder="e.g., Madrid")
-                is_remote = st.checkbox("Remote only")
-                experience = st.selectbox("Experience Level", 
-                                         ["Any", "Entry level", "Associate", "Mid-Senior level", "Director", "Executive"])
-                pages = st.slider("Pages to scrape", 1, 5, 2)
-
-                submit = st.form_submit_button("💾 Save Search")
-
-                if submit:
-                    if not keywords or not location:
-                        st.error("Keywords and location are required")
-                    else:
-                        try:
-                            supabase.table("search_configs").insert({
-                                "user_id": user_id,
-                                "keywords": keywords,
-                                "location": location,
-                                "is_remote": is_remote,
-                                "experience_level": experience if experience != "Any" else None,
-                                "pages": pages,
-                                "is_active": True
-                            }).execute()
-                            st.success("✅ Search saved! Jobs will appear within 6 hours.")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}")
-
         st.markdown("---")
+        page = st.radio("Navigation", ["📊 Dashboard", "🔍 Search Configs", "💼 Applications"])
 
-        # Show existing searches
-        st.subheader("Your Active Searches")
-        try:
-            configs = supabase.table("search_configs")\
-                             .select("*")\
-                             .eq("user_id", user_id)\
-                             .eq("is_active", True)\
-                             .order("created_at", desc=True)\
-                             .execute()
+    # Main content
+    if page == "📊 Dashboard":
+        show_dashboard(user.id)
+    elif page == "🔍 Search Configs":
+        show_search_configs(user.id)
+    elif page == "💼 Applications":
+        show_applications(user.id)
 
-            if configs.data:
-                for config in configs.data:
-                    with st.container():
-                        col1, col2 = st.columns([4, 1])
-                        with col1:
-                            st.markdown(f"**{config['keywords']}**")
-                            st.caption(f"📍 {config['location']}")
-                        with col2:
-                            if st.button("🗑️", key=f"del_{config['id']}"):
-                                supabase.table("search_configs")\
-                                       .update({"is_active": False})\
-                                       .eq("id", config["id"])\
-                                       .execute()
-                                st.rerun()
-                        st.markdown("---")
-            else:
-                st.info("No active searches yet. Add one above!")
-        except Exception as e:
-            st.error(f"Error loading searches: {str(e)}")
+def show_dashboard(user_id):
+    """Dashboard with stats and recent activity"""
+    st.markdown('<div class="main-header">🌪️ Zephyr Dashboard</div>', unsafe_allow_html=True)
 
-    # Main content: Jobs
-    st.header("📋 Your Job Listings")
-
-    # Filters
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        status_filter = st.selectbox("Status", ["All", "New", "Applied", "Interviewing", "Rejected", "Offer"])
-
-    with col2:
-        try:
-            companies = supabase.table("jobs")\
-                               .select("company")\
-                               .eq("user_id", user_id)\
-                               .execute()
-            unique_companies = sorted(list(set([j["company"] for j in companies.data if j["company"]])))
-            company_filter = st.selectbox("Company", ["All"] + unique_companies)
-        except:
-            company_filter = "All"
-
-    with col3:
-        date_filter = st.selectbox("Date Range", ["All time", "Last 7 days", "Last 30 days"])
-
-    with col4:
-        search_query = st.text_input("🔎 Search", placeholder="Title or company...")
-
-    # Fetch jobs
+    # Fetch stats
     try:
-        query = supabase.table("jobs").select("*").eq("user_id", user_id)
-
-        if status_filter != "All":
-            query = query.eq("status", status_filter)
-
-        if company_filter != "All":
-            query = query.eq("company", company_filter)
-
-        jobs_response = query.order("scraped_date", desc=True).execute()
-        jobs = jobs_response.data
-
-        # Apply date filter
-        if date_filter != "All time" and jobs:
-            days = 7 if date_filter == "Last 7 days" else 30
-            cutoff = datetime.now() - timedelta(days=days)
-            jobs = [j for j in jobs if datetime.fromisoformat(j["scraped_date"].replace("Z", "+00:00")) >= cutoff]
-
-        # Apply search filter
-        if search_query and jobs:
-            jobs = [j for j in jobs if 
-                   search_query.lower() in j["title"].lower() or 
-                   search_query.lower() in j["company"].lower()]
-
-        # Metrics
-        st.markdown("---")
+        jobs = supabase.table("jobs").select("*").eq("user_id", user_id).execute()
+        searches = supabase.table("search_configs").select("*").eq("user_id", user_id).execute()
+        
+        jobs_df = pd.DataFrame(jobs.data) if jobs.data else pd.DataFrame()
+        
+        # Stats cards
         col1, col2, col3, col4 = st.columns(4)
-
+        
         with col1:
-            total = len(supabase.table("jobs").select("id").eq("user_id", user_id).execute().data)
-            st.metric("📊 Total Jobs", total)
-
+            st.markdown(f"""
+            <div class="stat-card">
+                <div class="stat-number">{len(jobs_df)}</div>
+                <div class="stat-label">Total Applications</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
         with col2:
-            new = len([j for j in jobs if j["status"] == "New"])
-            st.metric("🆕 New", new)
-
+            applied = len(jobs_df[jobs_df["status"] == "Applied"]) if not jobs_df.empty else 0
+            st.markdown(f"""
+            <div class="stat-card">
+                <div class="stat-number">{applied}</div>
+                <div class="stat-label">Applied</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
         with col3:
-            applied = len([j for j in jobs if j["status"] == "Applied"])
-            st.metric("📤 Applied", applied)
-
+            active_searches = len([s for s in searches.data if s.get("is_active", False)])
+            st.markdown(f"""
+            <div class="stat-card">
+                <div class="stat-number">{active_searches}</div>
+                <div class="stat-label">Active Searches</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
         with col4:
-            interviewing = len([j for j in jobs if j["status"] == "Interviewing"])
-            st.metric("💼 Interviewing", interviewing)
+            week_ago = (datetime.now() - timedelta(days=7)).isoformat()
+            recent = len(jobs_df[jobs_df["created_at"] >= week_ago]) if not jobs_df.empty else 0
+            st.markdown(f"""
+            <div class="stat-card">
+                <div class="stat-number">{recent}</div>
+                <div class="stat-label">This Week</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("---")
 
-        # Display jobs
-        if not jobs:
-            st.info("📭 No jobs found. Try adjusting your filters or add a new job search!")
+        # Recent applications
+        if not jobs_df.empty:
+            st.subheader("📋 Recent Applications")
+            recent_jobs = jobs_df.sort_values("created_at", ascending=False).head(10)
+            st.dataframe(recent_jobs[["job_title", "company", "status", "created_at"]], use_container_width=True)
         else:
-            st.subheader(f"Showing {len(jobs)} jobs")
-
-            for job in jobs:
-                with st.expander(f"**{job['title']}** @ {job['company']} - {job['location']}"):
-                    col1, col2 = st.columns([3, 1])
-
-                    with col1:
-                        st.markdown(f"**Job ID:** {job['job_id']}")
-                        st.markdown(f"**Posted:** {job['posted_date'] or 'N/A'}")
-                        st.markdown(f"**Keywords:** {job['keywords']}")
-                        st.markdown(f"**Scraped:** {job['scraped_date']}")
-                        st.markdown(f"**URL:** [View Job]({job['url']})")
-
-                    with col2:
-                        new_status = st.selectbox(
-                            "Status",
-                            ["New", "Applied", "Interviewing", "Rejected", "Offer", "Declined"],
-                            index=["New", "Applied", "Interviewing", "Rejected", "Offer", "Declined"].index(job["status"]),
-                            key=f"status_{job['id']}"
-                        )
-
-                        if new_status != job["status"]:
-                            supabase.table("jobs")\
-                                   .update({"status": new_status})\
-                                   .eq("id", job["id"])\
-                                   .execute()
-                            st.success("✅ Updated!")
-                            st.rerun()
-
-                    notes = st.text_area(
-                        "Notes",
-                        value=job["notes"] or "",
-                        key=f"notes_{job['id']}",
-                        height=100
-                    )
-
-                    if notes != (job["notes"] or ""):
-                        if st.button("💾 Save Note", key=f"save_{job['id']}"):
-                            supabase.table("jobs")\
-                                   .update({"notes": notes})\
-                                   .eq("id", job["id"])\
-                                   .execute()
-                            st.success("✅ Note saved!")
-                            st.rerun()
-
-            # Export
-            st.markdown("---")
-            if st.button("📥 Export to CSV"):
-                df = pd.DataFrame(jobs)
-                csv = df.to_csv(index=False)
-                st.download_button(
-                    label="⬇️ Download CSV",
-                    data=csv,
-                    file_name=f"zephyr_jobs_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv"
-                )
+            st.info("No applications yet. Start by creating a search config!")
 
     except Exception as e:
-        st.error(f"❌ Error loading jobs: {str(e)}")
+        st.error(f"Error loading dashboard: {str(e)}")
+
+def show_search_configs(user_id):
+    """Manage search configurations"""
+    st.header("🔍 Search Configurations")
+
+    # Add new search config
+    with st.expander("➕ Add New Search", expanded=False):
+        with st.form("new_search"):
+            keywords = st.text_input("Keywords (e.g., 'Data Analyst')")
+            location = st.text_input("Location")
+            is_remote = st.checkbox("Remote only")
+            experience = st.selectbox("Experience Level", ["", "Entry level", "Mid-Senior level", "Director", "Executive"])
+            pages = st.number_input("Pages to scrape", min_value=1, max_value=10, value=2)
+            
+            if st.form_submit_button("💾 Save Search"):
+                try:
+                    supabase.table("search_configs").insert({
+                        "user_id": user_id,
+                        "keywords": keywords,
+                        "location": location,
+                        "is_remote": is_remote,
+                        "experience_level": experience if experience else None,
+                        "pages": pages,
+                        "is_active": True
+                    }).execute()
+                    st.success("✅ Search config saved!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+
+    # Display existing configs
+    try:
+        configs = supabase.table("search_configs").select("*").eq("user_id", user_id).execute()
+        
+        if configs.data:
+            for config in configs.data:
+                col1, col2, col3 = st.columns([3, 1, 1])
+                
+                with col1:
+                    status = "🟢 Active" if config["is_active"] else "🔴 Inactive"
+                    st.markdown(f"**{config['keywords']}** - {config['location']} {status}")
+                
+                with col2:
+                    if st.button("Toggle", key=f"toggle_{config['id']}"):
+                        supabase.table("search_configs").update({
+                            "is_active": not config["is_active"]
+                        }).eq("id", config["id"]).execute()
+                        st.rerun()
+                
+                with col3:
+                    if st.button("🗑️ Delete", key=f"delete_{config['id']}"):
+                        supabase.table("search_configs").delete().eq("id", config["id"]).execute()
+                        st.rerun()
+        else:
+            st.info("No search configs yet. Add one above!")
+
+    except Exception as e:
+        st.error(f"Error loading configs: {str(e)}")
+
+def show_applications(user_id):
+    """View and manage job applications"""
+    st.header("💼 Job Applications")
+
+    try:
+        jobs = supabase.table("jobs").select("*").eq("user_id", user_id).execute()
+        
+        if jobs.data:
+            df = pd.DataFrame(jobs.data)
+            
+            # Filters
+            col1, col2 = st.columns(2)
+            with col1:
+                status_filter = st.multiselect("Filter by Status", df["status"].unique())
+            with col2:
+                company_filter = st.text_input("Filter by Company")
+
+            # Apply filters
+            filtered_df = df.copy()
+            if status_filter:
+                filtered_df = filtered_df[filtered_df["status"].isin(status_filter)]
+            if company_filter:
+                filtered_df = filtered_df[filtered_df["company"].str.contains(company_filter, case=False, na=False)]
+
+            st.dataframe(filtered_df, use_container_width=True)
+            
+            # Download button
+            csv = filtered_df.to_csv(index=False)
+            st.download_button(
+                label="📥 Download CSV",
+                data=csv,
+                file_name=f"zephyr_applications_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("No applications yet. The scraper will populate this when it runs!")
+
+    except Exception as e:
+        st.error(f"Error loading applications: {str(e)}")
 
 # Main app logic
 if "user" not in st.session_state:
     login_page()
 else:
     main_app()
+
