@@ -148,7 +148,7 @@ async def main():
     # Fetch all active search configurations
     try:
         response = supabase.table("search_configs")\
-                          .select("*, profiles(username)")\
+                          .select("*")\
                           .eq("is_active", True)\
                           .execute()
 
