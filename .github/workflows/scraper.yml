@@ -1,52 +1,39 @@
-name: Zephyr Job Scraper
+name: Zephyr Job Scraper V2
 
 on:
   schedule:
-    # Runs at 8:00 AM CET (7:00 AM UTC) every day
-    - cron: '0 7 * * *'
-
+    # Runs every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+    - cron: '0 */6 * * *'
+  
+  # Manual trigger
   workflow_dispatch:
 
 jobs:
-  scrape-jobs:
+  scrape-all-users:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run scraper
+          pip install playwright supabase
+          playwright install chromium
+      
+      - name: Run V2 scraper
         env:
-          GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
-          GSHEETS_TYPE: ${{ secrets.GSHEETS_TYPE }}
-          GSHEETS_PROJECT_ID: ${{ secrets.GSHEETS_PROJECT_ID }}
-          GSHEETS_PRIVATE_KEY_ID: ${{ secrets.GSHEETS_PRIVATE_KEY_ID }}
-          GSHEETS_PRIVATE_KEY: ${{ secrets.GSHEETS_PRIVATE_KEY }}
-          GSHEETS_CLIENT_EMAIL: ${{ secrets.GSHEETS_CLIENT_EMAIL }}
-          GSHEETS_CLIENT_ID: ${{ secrets.GSHEETS_CLIENT_ID }}
-          GSHEETS_CLIENT_CERT_URL: ${{ secrets.GSHEETS_CLIENT_CERT_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python scraper_v2.py
-
-      - name: Commit log
+      
+      - name: Log completion
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "Zephyr Bot"
-          echo "Scraper ran at $(date)" >> scraper.log
-          git add scraper.log || true
-          git diff-index --quiet HEAD || git commit -m "Scraper run: $(date)"
+          echo "✅ Scraper V2 completed at $(date)"
 
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main

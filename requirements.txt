@@ -1,7 +1,4 @@
 # Minimal requirements for Streamlit Cloud deployment
 # (Scraper runs on GitHub Actions, not needed here)
-
-streamlit>=1.31.0
-supabase>=2.0.0
-pandas>=2.0.0
-python-dateutil>=2.8.0
+supabase>=2.3.0
+playwright==1.41.0

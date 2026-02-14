@@ -1,6 +1,6 @@
 """
-Zephyr Job Scraper V2 - Direct PostgreSQL Version
-Bypasses Supabase client to avoid PostgREST caching issues
+Zephyr Job Scraper V2 - Supabase Client Version
+Uses Supabase REST API instead of direct PostgreSQL
 """
 
 import os
@@ -8,20 +8,17 @@ import asyncio
 import hashlib
 from datetime import datetime
 from urllib.parse import quote_plus
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from supabase import create_client, Client
 from playwright.async_api import async_playwright
 
 # Configuration
 SCRAPE_DELAY = 3  # seconds between users
 
-
-def get_db_connection():
-    """Create direct PostgreSQL connection"""
-    database_url = os.environ.get("DATABASE_URL")
-    if not database_url:
-        raise Exception("DATABASE_URL environment variable not set")
-    return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+# Initialize Supabase client
+supabase: Client = create_client(
+    os.environ.get("SUPABASE_URL"),
+    os.environ.get("SUPABASE_SERVICE_KEY")
+)
 
 
 def generate_job_hash(title, company, location):
@@ -86,7 +83,7 @@ async def scrape_linkedin_jobs(keywords, location, pages=1):
                         print(f"    ⚠️  Error parsing job card: {e}")
                         continue
                 
-                await asyncio.sleep(2)  # Rate limiting
+                await asyncio.sleep(2)
                 
             except Exception as e:
                 print(f"    ❌ Error on page {page_num + 1}: {e}")
@@ -117,53 +114,38 @@ async def scrape_for_user(user_id, config):
     
     print(f"  📦 Found {len(jobs)} jobs")
     
-    # Save to database
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
+    # Save to database using Supabase client
     new_jobs = 0
     
     try:
         for job in jobs:
             # Check if job already exists
-            cursor.execute(
-                "SELECT id FROM jobs WHERE job_hash = %s AND user_id = %s",
-                (job["job_hash"], user_id)
-            )
+            existing = supabase.table("jobs")\
+                .select("id")\
+                .eq("job_hash", job["job_hash"])\
+                .eq("user_id", user_id)\
+                .execute()
             
-            if cursor.fetchone():
+            if existing.data:
                 continue  # Skip duplicate
             
             # Insert new job
-            cursor.execute(
-                """
-                INSERT INTO jobs (
-                    user_id, title, company, location, url, 
-                    job_hash, source, created_at
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
-                """,
-                (
-                    user_id,
-                    job["title"],
-                    job["company"],
-                    job["location"],
-                    job["url"],
-                    job["job_hash"],
-                    job["source"]
-                )
-            )
+            supabase.table("jobs").insert({
+                "user_id": user_id,
+                "title": job["title"],
+                "company": job["company"],
+                "location": job["location"],
+                "url": job["url"],
+                "job_hash": job["job_hash"],
+                "source": job["source"]
+            }).execute()
+            
             new_jobs += 1
         
-        conn.commit()
         print(f"  ✅ Saved {new_jobs} new jobs")
         
     except Exception as e:
-        conn.rollback()
         print(f"  ❌ Database error: {e}")
-    finally:
-        cursor.close()
-        conn.close()
     
     return new_jobs
 
@@ -175,17 +157,14 @@ async def main():
     print("=" * 60)
     print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
     try:
         # Get active search configs
-        cursor.execute("""
-            SELECT id, user_id, keywords, location, pages 
-            FROM search_configs 
-            WHERE is_active = true
-        """)
-        configs = cursor.fetchall()
+        response = supabase.table("search_configs")\
+            .select("id, user_id, keywords, location, pages")\
+            .eq("is_active", True)\
+            .execute()
+        
+        configs = response.data
         
         if not configs:
             print("\n⚠️  No active search configurations found")
@@ -214,9 +193,6 @@ async def main():
     except Exception as e:
         print(f"\n❌ Fatal error: {e}")
         raise
-    finally:
-        cursor.close()
-        conn.close()
 
 
 if __name__ == "__main__":
