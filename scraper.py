@@ -147,11 +147,7 @@ async def main():
 
     # Fetch all active search configurations
     try:
-        response = supabase.table("search_configs")\
-                          .select("*")\
-                          .eq("is_active", True)\
-                          .execute()
-
+        response = supabase.rpc('get_active_searches', {}).execute()
         configs = response.data
 
         if not configs:
