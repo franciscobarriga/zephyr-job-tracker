@@ -1,10 +1,10 @@
 """
-Zephyr Streamlit App
-Job application tracking interface
+Zephyr Multi-User Streamlit App - Supabase Version
+Job tracking with authentication and personalized searches
 """
 
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
+from supabase import create_client, Client
 import pandas as pd
 from datetime import datetime, timedelta
 
@@ -15,6 +15,15 @@ st.set_page_config(
     layout="wide"
 )
 
+# Initialize Supabase
+@st.cache_resource
+def init_supabase():
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_ANON_KEY"]  # Frontend uses anon key
+    return create_client(url, key)
+
+supabase: Client = init_supabase()
+
 # Custom CSS
 st.markdown("""
 <style>
@@ -22,160 +31,287 @@ st.markdown("""
         font-size: 3rem;
         font-weight: bold;
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
     }
-    .metric-card {
-        background-color: #f0f2f6;
-        padding: 1rem;
-        border-radius: 0.5rem;
+    .subtitle {
         text-align: center;
+        color: #666;
+        margin-bottom: 2rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Header
-st.markdown('<div class="main-header">🌪️ Zephyr Job Tracker</div>', unsafe_allow_html=True)
-st.markdown("---")
+# Authentication Functions
+def login_page():
+    """Login page UI"""
+    st.markdown('<div class="main-header">🌪️ Zephyr</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Automated Job Application Tracker</div>', unsafe_allow_html=True)
 
-# Connect to Google Sheets
-@st.cache_resource
-def get_connection():
-    return st.connection("gsheets", type=GSheetsConnection)
+    tab1, tab2 = st.tabs(["Login", "Sign Up"])
 
-def load_data():
-    """Load data from Google Sheets"""
-    conn = get_connection()
-    df = conn.read(ttl=60)
+    with tab1:
+        with st.form("login_form"):
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            submit = st.form_submit_button("Login")
 
-    if df.empty:
-        headers = ["job_id", "title", "company", "location", "posted_date", 
-                   "url", "keywords", "scraped_date", "status", "notes"]
-        df = pd.DataFrame(columns=headers)
+            if submit:
+                try:
+                    response = supabase.auth.sign_in_with_password({
+                        "email": email,
+                        "password": password
+                    })
+                    st.session_state["user"] = response.user
+                    st.session_state["session"] = response.session
+                    st.success("✅ Logged in successfully!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Login failed: {str(e)}")
 
-    return df
+    with tab2:
+        with st.form("signup_form"):
+            email = st.text_input("Email", key="signup_email")
+            password = st.text_input("Password (min 6 chars)", type="password", key="signup_password")
+            username = st.text_input("Username")
+            full_name = st.text_input("Full Name")
+            submit = st.form_submit_button("Sign Up")
 
-def save_data(df):
-    """Save data to Google Sheets"""
-    conn = get_connection()
-    conn.update(data=df)
-    st.success("✅ Changes saved!")
+            if submit:
+                if len(password) < 6:
+                    st.error("Password must be at least 6 characters")
+                elif not username:
+                    st.error("Username is required")
+                else:
+                    try:
+                        # Sign up user
+                        response = supabase.auth.sign_up({
+                            "email": email,
+                            "password": password,
+                            "options": {
+                                "data": {
+                                    "username": username,
+                                    "full_name": full_name
+                                }
+                            }
+                        })
 
-# Load data
-try:
-    df = load_data()
+                        st.success("✅ Account created! Please check your email to verify, then login.")
+                    except Exception as e:
+                        st.error(f"❌ Signup failed: {str(e)}")
 
-    # Sidebar filters
-    st.sidebar.header("🔍 Filters")
+def main_app():
+    """Main application UI (after login)"""
+    user = st.session_state["user"]
+    user_id = user.id
 
-    status_options = ["All"] + df["status"].unique().tolist() if not df.empty else ["All"]
-    selected_status = st.sidebar.selectbox("Status", status_options)
-
-    company_options = ["All"] + sorted(df["company"].unique().tolist()) if not df.empty else ["All"]
-    selected_company = st.sidebar.selectbox("Company", company_options)
-
-    location_options = ["All"] + sorted(df["location"].unique().tolist()) if not df.empty else ["All"]
-    selected_location = st.sidebar.selectbox("Location", location_options)
-
-    st.sidebar.subheader("📅 Date Range")
-    date_filter = st.sidebar.radio("Show jobs from:", 
-                                     ["All time", "Last 7 days", "Last 30 days"])
-
-    search_query = st.sidebar.text_input("🔎 Search (title/company)", "")
-
-    # Apply filters
-    filtered_df = df.copy()
-
-    if selected_status != "All":
-        filtered_df = filtered_df[filtered_df["status"] == selected_status]
-
-    if selected_company != "All":
-        filtered_df = filtered_df[filtered_df["company"] == selected_company]
-
-    if selected_location != "All":
-        filtered_df = filtered_df[filtered_df["location"] == selected_location]
-
-    if date_filter != "All time" and not filtered_df.empty:
-        days = 7 if date_filter == "Last 7 days" else 30
-        cutoff_date = datetime.now() - timedelta(days=days)
-        filtered_df["scraped_date"] = pd.to_datetime(filtered_df["scraped_date"])
-        filtered_df = filtered_df[filtered_df["scraped_date"] >= cutoff_date]
-
-    if search_query:
-        mask = (filtered_df["title"].str.contains(search_query, case=False, na=False) | 
-                filtered_df["company"].str.contains(search_query, case=False, na=False))
-        filtered_df = filtered_df[mask]
-
-    # Metrics
-    col1, col2, col3, col4 = st.columns(4)
-
+    # Header
+    col1, col2, col3 = st.columns([2, 6, 2])
     with col1:
-        st.metric("📊 Total Jobs", len(df))
-
+        st.markdown("## 🌪️ Zephyr")
     with col2:
-        new_count = len(df[df["status"] == "New"]) if not df.empty else 0
-        st.metric("🆕 New", new_count)
-
+        st.markdown(f"### Welcome, {user.email.split('@')[0]}!")
     with col3:
-        applied_count = len(df[df["status"] == "Applied"]) if not df.empty else 0
-        st.metric("📤 Applied", applied_count)
-
-    with col4:
-        interview_count = len(df[df["status"] == "Interviewing"]) if not df.empty else 0
-        st.metric("💼 Interviewing", interview_count)
+        if st.button("🚪 Logout"):
+            supabase.auth.sign_out()
+            st.session_state.clear()
+            st.rerun()
 
     st.markdown("---")
 
-    # Main content
-    if filtered_df.empty:
-        st.info("📭 No jobs found. Adjust your filters or wait for the scraper to run.")
-    else:
-        st.subheader(f"📋 Job Listings ({len(filtered_df)} results)")
+    # Sidebar: Manage Search Configs
+    with st.sidebar:
+        st.header("⚙️ Job Searches")
 
-        for idx, row in filtered_df.iterrows():
-            with st.expander(f"**{row['title']}** @ {row['company']} - {row['location']}"):
-                col1, col2 = st.columns([3, 1])
+        # Add new search
+        with st.expander("➕ Add New Search", expanded=False):
+            with st.form("add_search"):
+                keywords = st.text_input("Keywords*", placeholder="e.g., data engineer")
+                location = st.text_input("Location*", placeholder="e.g., Madrid")
+                is_remote = st.checkbox("Remote only")
+                experience = st.selectbox("Experience Level", 
+                                         ["Any", "Entry level", "Associate", "Mid-Senior level", "Director", "Executive"])
+                pages = st.slider("Pages to scrape", 1, 5, 2)
 
-                with col1:
-                    st.markdown(f"**Job ID:** {row['job_id']}")
-                    st.markdown(f"**Posted:** {row['posted_date']}")
-                    st.markdown(f"**Keywords:** {row['keywords']}")
-                    st.markdown(f"**Scraped:** {row['scraped_date']}")
-                    st.markdown(f"**URL:** [View Job]({row['url']})")
+                submit = st.form_submit_button("💾 Save Search")
 
-                with col2:
-                    new_status = st.selectbox(
-                        "Status",
-                        ["New", "Applied", "Interviewing", "Rejected", "Offer", "Declined"],
-                        index=["New", "Applied", "Interviewing", "Rejected", "Offer", "Declined"].index(row["status"]),
-                        key=f"status_{idx}"
-                    )
-
-                    if new_status != row["status"]:
-                        df.loc[idx, "status"] = new_status
-                        save_data(df)
-                        st.rerun()
-
-                notes = st.text_area(
-                    "Notes",
-                    value=row["notes"] if pd.notna(row["notes"]) else "",
-                    key=f"notes_{idx}",
-                    height=100
-                )
-
-                if notes != row["notes"]:
-                    if st.button("💾 Save Note", key=f"save_{idx}"):
-                        df.loc[idx, "notes"] = notes
-                        save_data(df)
-                        st.rerun()
+                if submit:
+                    if not keywords or not location:
+                        st.error("Keywords and location are required")
+                    else:
+                        try:
+                            supabase.table("search_configs").insert({
+                                "user_id": user_id,
+                                "keywords": keywords,
+                                "location": location,
+                                "is_remote": is_remote,
+                                "experience_level": experience if experience != "Any" else None,
+                                "pages": pages,
+                                "is_active": True
+                            }).execute()
+                            st.success("✅ Search saved! Jobs will appear within 6 hours.")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
 
         st.markdown("---")
-        st.subheader("⚡ Bulk Actions")
 
-        col1, col2, col3 = st.columns(3)
+        # Show existing searches
+        st.subheader("Your Active Searches")
+        try:
+            configs = supabase.table("search_configs")\
+                             .select("*")\
+                             .eq("user_id", user_id)\
+                             .eq("is_active", True)\
+                             .order("created_at", desc=True)\
+                             .execute()
+
+            if configs.data:
+                for config in configs.data:
+                    with st.container():
+                        col1, col2 = st.columns([4, 1])
+                        with col1:
+                            st.markdown(f"**{config['keywords']}**")
+                            st.caption(f"📍 {config['location']}")
+                        with col2:
+                            if st.button("🗑️", key=f"del_{config['id']}"):
+                                supabase.table("search_configs")\
+                                       .update({"is_active": False})\
+                                       .eq("id", config["id"])\
+                                       .execute()
+                                st.rerun()
+                        st.markdown("---")
+            else:
+                st.info("No active searches yet. Add one above!")
+        except Exception as e:
+            st.error(f"Error loading searches: {str(e)}")
+
+    # Main content: Jobs
+    st.header("📋 Your Job Listings")
+
+    # Filters
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        status_filter = st.selectbox("Status", ["All", "New", "Applied", "Interviewing", "Rejected", "Offer"])
+
+    with col2:
+        try:
+            companies = supabase.table("jobs")\
+                               .select("company")\
+                               .eq("user_id", user_id)\
+                               .execute()
+            unique_companies = sorted(list(set([j["company"] for j in companies.data if j["company"]])))
+            company_filter = st.selectbox("Company", ["All"] + unique_companies)
+        except:
+            company_filter = "All"
+
+    with col3:
+        date_filter = st.selectbox("Date Range", ["All time", "Last 7 days", "Last 30 days"])
+
+    with col4:
+        search_query = st.text_input("🔎 Search", placeholder="Title or company...")
+
+    # Fetch jobs
+    try:
+        query = supabase.table("jobs").select("*").eq("user_id", user_id)
+
+        if status_filter != "All":
+            query = query.eq("status", status_filter)
+
+        if company_filter != "All":
+            query = query.eq("company", company_filter)
+
+        jobs_response = query.order("scraped_date", desc=True).execute()
+        jobs = jobs_response.data
+
+        # Apply date filter
+        if date_filter != "All time" and jobs:
+            days = 7 if date_filter == "Last 7 days" else 30
+            cutoff = datetime.now() - timedelta(days=days)
+            jobs = [j for j in jobs if datetime.fromisoformat(j["scraped_date"].replace("Z", "+00:00")) >= cutoff]
+
+        # Apply search filter
+        if search_query and jobs:
+            jobs = [j for j in jobs if 
+                   search_query.lower() in j["title"].lower() or 
+                   search_query.lower() in j["company"].lower()]
+
+        # Metrics
+        st.markdown("---")
+        col1, col2, col3, col4 = st.columns(4)
 
         with col1:
+            total = len(supabase.table("jobs").select("id").eq("user_id", user_id).execute().data)
+            st.metric("📊 Total Jobs", total)
+
+        with col2:
+            new = len([j for j in jobs if j["status"] == "New"])
+            st.metric("🆕 New", new)
+
+        with col3:
+            applied = len([j for j in jobs if j["status"] == "Applied"])
+            st.metric("📤 Applied", applied)
+
+        with col4:
+            interviewing = len([j for j in jobs if j["status"] == "Interviewing"])
+            st.metric("💼 Interviewing", interviewing)
+
+        st.markdown("---")
+
+        # Display jobs
+        if not jobs:
+            st.info("📭 No jobs found. Try adjusting your filters or add a new job search!")
+        else:
+            st.subheader(f"Showing {len(jobs)} jobs")
+
+            for job in jobs:
+                with st.expander(f"**{job['title']}** @ {job['company']} - {job['location']}"):
+                    col1, col2 = st.columns([3, 1])
+
+                    with col1:
+                        st.markdown(f"**Job ID:** {job['job_id']}")
+                        st.markdown(f"**Posted:** {job['posted_date'] or 'N/A'}")
+                        st.markdown(f"**Keywords:** {job['keywords']}")
+                        st.markdown(f"**Scraped:** {job['scraped_date']}")
+                        st.markdown(f"**URL:** [View Job]({job['url']})")
+
+                    with col2:
+                        new_status = st.selectbox(
+                            "Status",
+                            ["New", "Applied", "Interviewing", "Rejected", "Offer", "Declined"],
+                            index=["New", "Applied", "Interviewing", "Rejected", "Offer", "Declined"].index(job["status"]),
+                            key=f"status_{job['id']}"
+                        )
+
+                        if new_status != job["status"]:
+                            supabase.table("jobs")\
+                                   .update({"status": new_status})\
+                                   .eq("id", job["id"])\
+                                   .execute()
+                            st.success("✅ Updated!")
+                            st.rerun()
+
+                    notes = st.text_area(
+                        "Notes",
+                        value=job["notes"] or "",
+                        key=f"notes_{job['id']}",
+                        height=100
+                    )
+
+                    if notes != (job["notes"] or ""):
+                        if st.button("💾 Save Note", key=f"save_{job['id']}"):
+                            supabase.table("jobs")\
+                                   .update({"notes": notes})\
+                                   .eq("id", job["id"])\
+                                   .execute()
+                            st.success("✅ Note saved!")
+                            st.rerun()
+
+            # Export
+            st.markdown("---")
             if st.button("📥 Export to CSV"):
-                csv = filtered_df.to_csv(index=False)
+                df = pd.DataFrame(jobs)
+                csv = df.to_csv(index=False)
                 st.download_button(
                     label="⬇️ Download CSV",
                     data=csv,
@@ -183,11 +319,11 @@ try:
                     mime="text/csv"
                 )
 
-        with col2:
-            if st.button("🔄 Refresh Data"):
-                st.cache_resource.clear()
-                st.rerun()
+    except Exception as e:
+        st.error(f"❌ Error loading jobs: {str(e)}")
 
-except Exception as e:
-    st.error(f"❌ Error loading data: {str(e)}")
-    st.info("Make sure your Google Sheets connection is configured correctly in `.streamlit/secrets.toml`")
+# Main app logic
+if "user" not in st.session_state:
+    login_page()
+else:
+    main_app()

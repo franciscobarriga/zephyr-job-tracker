@@ -1,63 +1,28 @@
 """
-Zephyr Job Scraper
-Scrapes LinkedIn jobs via public API and saves to Google Sheets
+Zephyr Multi-User Job Scraper - Supabase Version
+Scrapes LinkedIn jobs for ALL users and saves to Supabase
 """
 
 import os
-import yaml
 import asyncio
 import httpx
 from bs4 import BeautifulSoup
 from datetime import datetime
-import gspread
-from google.oauth2.service_account import Credentials
+from supabase import create_client, Client
 from typing import List, Dict
-import time
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Initialize Supabase client
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")  # Service role for backend
 
-# Google Sheets setup
-SCOPES = [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive'
-]
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("Missing Supabase credentials in environment variables")
 
-def load_config() -> Dict:
-    """Load configuration from config.yaml"""
-    with open('config.yaml', 'r') as f:
-        return yaml.safe_load(f)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def get_google_sheets_client():
-    """Initialize Google Sheets client using service account"""
-    creds_dict = {
-        "type": os.environ.get("GSHEETS_TYPE"),
-        "project_id": os.environ.get("GSHEETS_PROJECT_ID"),
-        "private_key_id": os.environ.get("GSHEETS_PRIVATE_KEY_ID"),
-        "private_key": os.environ.get("GSHEETS_PRIVATE_KEY").replace('\\n', '\n'),
-        "client_email": os.environ.get("GSHEETS_CLIENT_EMAIL"),
-        "client_id": os.environ.get("GSHEETS_CLIENT_ID"),
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_x509_cert_url": os.environ.get("GSHEETS_CLIENT_CERT_URL")
-    }
-
-    credentials = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
-    return gspread.authorize(credentials)
-
-async def scrape_linkedin_jobs(keywords: str, location: str, pages: int = 3) -> List[Dict]:
+async def scrape_linkedin_jobs(keywords: str, location: str, pages: int = 2) -> List[Dict]:
     """
     Scrape LinkedIn jobs using public API endpoint
-
-    Args:
-        keywords: Job search keywords (e.g., "data engineer")
-        location: Job location (e.g., "Madrid" or "Remote")
-        pages: Number of pages to scrape (default 3)
-
-    Returns:
-        List of job dictionaries
     """
     base_url = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 
@@ -84,7 +49,7 @@ async def scrape_linkedin_jobs(keywords: str, location: str, pages: int = 3) -> 
             try:
                 params["start"] = str(page * 25)
 
-                print(f"Scraping page {page + 1}/{pages} for '{keywords}' in '{location}'...")
+                print(f"  📄 Page {page + 1}/{pages}...", end=" ")
 
                 response = await client.get(base_url, headers=headers, params=params)
                 response.raise_for_status()
@@ -92,8 +57,8 @@ async def scrape_linkedin_jobs(keywords: str, location: str, pages: int = 3) -> 
                 soup = BeautifulSoup(response.content, "lxml")
                 job_li_elements = soup.select("li")
 
+                page_jobs = 0
                 for job_li in job_li_elements:
-                    # Extract job URL and ID
                     link_element = job_li.select_one('a[data-tracking-control-name="public_jobs_jserp-result_search-card"]')
                     if not link_element:
                         continue
@@ -101,19 +66,15 @@ async def scrape_linkedin_jobs(keywords: str, location: str, pages: int = 3) -> 
                     job_url = link_element.get("href", "")
                     job_id = job_url.split("/")[-1].split("?")[0] if job_url else ""
 
-                    # Extract title
                     title_element = job_li.select_one("h3.base-search-card__title")
                     title = title_element.text.strip() if title_element else "N/A"
 
-                    # Extract company
                     company_element = job_li.select_one("h4.base-search-card__subtitle")
                     company = company_element.text.strip() if company_element else "N/A"
 
-                    # Extract location
                     location_element = job_li.select_one("span.job-search-card__location")
                     job_location = location_element.text.strip() if location_element else location
 
-                    # Extract posted date
                     date_element = job_li.select_one("time.job-search-card__listdate")
                     posted_date = date_element.get("datetime", "") if date_element else ""
 
@@ -122,105 +83,111 @@ async def scrape_linkedin_jobs(keywords: str, location: str, pages: int = 3) -> 
                         "title": title,
                         "company": company,
                         "location": job_location,
-                        "posted_date": posted_date,
+                        "posted_date": posted_date or None,
                         "url": job_url,
                         "keywords": keywords,
-                        "scraped_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "status": "New",
-                        "notes": ""
                     }
 
                     job_postings.append(job_posting)
+                    page_jobs += 1
+
+                print(f"{page_jobs} jobs found")
 
                 # Rate limiting
                 await asyncio.sleep(2)
 
             except Exception as e:
-                print(f"Error scraping page {page + 1}: {str(e)}")
+                print(f"❌ Error on page {page + 1}: {str(e)}")
                 continue
 
-    print(f"Scraped {len(job_postings)} jobs")
     return job_postings
 
-def deduplicate_jobs(new_jobs: List[Dict], existing_job_ids: List[str]) -> List[Dict]:
-    """Remove jobs that already exist in the sheet"""
-    return [job for job in new_jobs if job["job_id"] not in existing_job_ids]
+async def scrape_for_user(user_id: str, config: Dict) -> int:
+    """Scrape jobs for a single user configuration"""
+    keywords = config["keywords"]
+    location = config["location"]
+    pages = config.get("pages", 2)
+    config_id = config["id"]
 
-def save_to_google_sheets(jobs: List[Dict], sheet_url: str):
-    """Save jobs to Google Sheets"""
+    print(f"\n🔍 Scraping: '{keywords}' in '{location}' (User: {user_id[:8]}...)")
+
+    jobs = await scrape_linkedin_jobs(keywords, location, pages)
+
     if not jobs:
-        print("No new jobs to save")
-        return
+        print("  ⚠️  No jobs found")
+        return 0
 
-    try:
-        client = get_google_sheets_client()
-        sheet = client.open_by_url(sheet_url).sheet1
+    # Add user_id and config_id to each job
+    for job in jobs:
+        job["user_id"] = user_id
+        job["search_config_id"] = config_id
+        job["status"] = "New"
+        job["notes"] = ""
 
-        # Get existing job IDs to avoid duplicates
-        existing_data = sheet.get_all_values()
-        existing_job_ids = [row[0] for row in existing_data[1:]] if len(existing_data) > 1 else []
+    # Insert jobs (unique constraint handles deduplication)
+    inserted = 0
+    for job in jobs:
+        try:
+            supabase.table("jobs").insert(job).execute()
+            inserted += 1
+        except Exception as e:
+            # Likely duplicate - skip silently
+            if "duplicate" not in str(e).lower():
+                print(f"  ⚠️  Error inserting job: {str(e)}")
 
-        # Deduplicate
-        unique_jobs = deduplicate_jobs(jobs, existing_job_ids)
-
-        if not unique_jobs:
-            print("All jobs already exist in the sheet")
-            return
-
-        # Append new jobs
-        rows_to_add = [
-            [
-                job["job_id"],
-                job["title"],
-                job["company"],
-                job["location"],
-                job["posted_date"],
-                job["url"],
-                job["keywords"],
-                job["scraped_date"],
-                job["status"],
-                job["notes"]
-            ]
-            for job in unique_jobs
-        ]
-
-        sheet.append_rows(rows_to_add)
-        print(f"Added {len(unique_jobs)} new jobs to Google Sheets")
-
-    except Exception as e:
-        print(f"Error saving to Google Sheets: {str(e)}")
-        raise
+    print(f"  ✅ Saved {inserted}/{len(jobs)} new jobs")
+    return inserted
 
 async def main():
-    """Main execution function"""
-    config = load_config()
+    """Main scraper - runs for all active user configurations"""
+    print("=" * 60)
+    print("🌪️  ZEPHYR MULTI-USER SCRAPER")
+    print("=" * 60)
+    print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # Get sheet URL from environment or config
-    sheet_url = os.environ.get("GOOGLE_SHEET_URL", config.get("google_sheet_url", ""))
+    # Fetch all active search configurations
+    try:
+        response = supabase.table("search_configs")\
+                          .select("*, profiles(username)")\
+                          .eq("is_active", True)\
+                          .execute()
 
-    if not sheet_url:
-        raise ValueError("GOOGLE_SHEET_URL not found in environment or config")
+        configs = response.data
 
-    all_jobs = []
+        if not configs:
+            print("\n⚠️  No active search configurations found")
+            return
 
-    # Scrape for each keyword-location combination
-    for search in config.get("searches", []):
-        keywords = search.get("keywords", "")
-        location = search.get("location", "")
-        pages = search.get("pages", 2)
+        print(f"\n📋 Found {len(configs)} active search configurations")
+        print("-" * 60)
 
-        if keywords and location:
-            jobs = await scrape_linkedin_jobs(keywords, location, pages)
-            all_jobs.extend(jobs)
+        total_new_jobs = 0
 
-            # Sleep between searches to avoid rate limiting
-            await asyncio.sleep(3)
+        # Process each configuration
+        for config in configs:
+            user_id = config["user_id"]
+            username = config.get("profiles", {}).get("username", "Unknown")
 
-    # Save to Google Sheets
-    if all_jobs:
-        save_to_google_sheets(all_jobs, sheet_url)
-    else:
-        print("No jobs scraped")
+            try:
+                new_jobs = await scrape_for_user(user_id, config)
+                total_new_jobs += new_jobs
+
+                # Sleep between users to be nice to LinkedIn
+                await asyncio.sleep(3)
+
+            except Exception as e:
+                print(f"  ❌ Error for user {username}: {str(e)}")
+                continue
+
+        print("\n" + "=" * 60)
+        print(f"✅ SCRAPING COMPLETE")
+        print(f"📊 Total new jobs saved: {total_new_jobs}")
+        print(f"⏰ Finished at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("=" * 60)
+
+    except Exception as e:
+        print(f"\n❌ Fatal error: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     asyncio.run(main())
