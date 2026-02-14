@@ -35,7 +35,7 @@ jobs:
           GSHEETS_CLIENT_EMAIL: ${{ secrets.GSHEETS_CLIENT_EMAIL }}
           GSHEETS_CLIENT_ID: ${{ secrets.GSHEETS_CLIENT_ID }}
           GSHEETS_CLIENT_CERT_URL: ${{ secrets.GSHEETS_CLIENT_CERT_URL }}
-        run: python scraper.py
+        run: python scraper_v2.py
 
       - name: Commit log
         run: |
