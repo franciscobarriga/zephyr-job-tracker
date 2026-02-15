@@ -32,6 +32,9 @@ async def dashboard(request: Request, user = Depends(get_current_user)):
         # Calculate stats
         total_jobs = len(jobs)
         applied_count = len([j for j in jobs if j.get("status") == "Applied"])
+        thinking_count = len([j for j in jobs if j.get("status") == "Thinking"])
+        ignored_count = len([j for j in jobs if j.get("status") == "Ignored"])
+        new_count = len([j for j in jobs if j.get("status") == "New" or not j.get("status")])
         active_searches = len([c for c in configs if c.get("is_active")])
         
         # Jobs this week
@@ -48,6 +51,9 @@ async def dashboard(request: Request, user = Depends(get_current_user)):
             "stats": {
                 "total": total_jobs,
                 "applied": applied_count,
+                "thinking": thinking_count,
+                "ignored": ignored_count,
+                "new": new_count,
                 "active_searches": active_searches,
                 "week": week_count
             },

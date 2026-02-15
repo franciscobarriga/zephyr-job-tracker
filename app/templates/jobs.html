@@ -33,13 +33,43 @@
                         <td>{{ job.company }}</td>
                         <td>{{ job.location }}</td>
                         <td>
-                            <span class="badge bg-secondary">{{ job.status or 'New' }}</span>
+                            {% set status = job.status or 'New' %}
+                            {% if status == 'Applied' %}
+                                <span class="badge bg-success">Applied</span>
+                            {% elif status == 'Thinking' %}
+                                <span class="badge bg-warning">Thinking</span>
+                            {% elif status == 'Ignored' %}
+                                <span class="badge bg-secondary">Ignored</span>
+                            {% else %}
+                                <span class="badge bg-info">New</span>
+                            {% endif %}
                         </td>
                         <td>{{ job.source or 'LinkedIn' }}</td>
                         <td>{{ job.created_at[:10] if job.created_at else 'N/A' }}</td>
-                        <td>
+                        <td class="d-flex gap-1">
+                            <!-- Status Toggle Buttons -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <form method="POST" action="/jobs/{{ job.id }}/update-status" style="display: inline;">
+                                    <input type="hidden" name="status" value="Applied">
+                                    <button type="submit" class="btn {% if status == 'Applied' %}btn-success{% else %}btn-outline-success{% endif %}" title="Mark as Applied">
+                                        <i class="bi bi-check-circle"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="/jobs/{{ job.id }}/update-status" style="display: inline;">
+                                    <input type="hidden" name="status" value="Thinking">
+                                    <button type="submit" class="btn {% if status == 'Thinking' %}btn-warning{% else %}btn-outline-warning{% endif %}" title="Mark as Thinking">
+                                        <i class="bi bi-hourglass-split"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="/jobs/{{ job.id }}/update-status" style="display: inline;">
+                                    <input type="hidden" name="status" value="Ignored">
+                                    <button type="submit" class="btn {% if status == 'Ignored' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" title="Mark as Ignored">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </form>
+                            </div>
                             {% if job.url %}
-                            <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Job">
+                            <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary ms-2" title="View Job">
                                 <i class="bi bi-box-arrow-up-right"></i>
                             </a>
                             {% endif %}

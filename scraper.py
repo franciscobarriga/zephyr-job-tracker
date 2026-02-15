@@ -137,7 +137,8 @@ async def scrape_for_user(user_id, config):
                 "location": job["location"],
                 "url": job["url"],
                 "job_hash": job["job_hash"],
-                "source": job["source"]
+                "source": job["source"],
+                "status": "New"
             }).execute()
             
             new_jobs += 1

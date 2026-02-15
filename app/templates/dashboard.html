@@ -10,25 +10,47 @@
     <div class="col-md-3 mb-3">
         <div class="stat-card">
             <div class="stat-number">{{ stats.total }}</div>
-            <div class="stat-label">Total Applications</div>
+            <div class="stat-label">Total Jobs</div>
         </div>
     </div>
     <div class="col-md-3 mb-3">
-        <div class="stat-card">
+        <div class="stat-card bg-success text-white">
             <div class="stat-number">{{ stats.applied }}</div>
             <div class="stat-label">Applied</div>
         </div>
     </div>
     <div class="col-md-3 mb-3">
+        <div class="stat-card bg-warning">
+            <div class="stat-number">{{ stats.thinking }}</div>
+            <div class="stat-label">Thinking</div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card bg-info text-white">
+            <div class="stat-number">{{ stats.new }}</div>
+            <div class="stat-label">New</div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Stats -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
         <div class="stat-card">
             <div class="stat-number">{{ stats.active_searches }}</div>
             <div class="stat-label">Active Searches</div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-md-4 mb-3">
         <div class="stat-card">
             <div class="stat-number">{{ stats.week }}</div>
             <div class="stat-label">This Week</div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="stat-card bg-secondary text-white">
+            <div class="stat-number">{{ stats.ignored }}</div>
+            <div class="stat-label">Ignored</div>
         </div>
     </div>
 </div>
@@ -59,7 +81,16 @@
                         <td>{{ job.company }}</td>
                         <td>{{ job.location }}</td>
                         <td>
-                            <span class="badge bg-secondary">{{ job.status or 'New' }}</span>
+                            {% set status = job.status or 'New' %}
+                            {% if status == 'Applied' %}
+                                <span class="badge bg-success">Applied</span>
+                            {% elif status == 'Thinking' %}
+                                <span class="badge bg-warning">Thinking</span>
+                            {% elif status == 'Ignored' %}
+                                <span class="badge bg-secondary">Ignored</span>
+                            {% else %}
+                                <span class="badge bg-info">New</span>
+                            {% endif %}
                         </td>
                         <td>{{ job.created_at[:10] if job.created_at else 'N/A' }}</td>
                         <td>
