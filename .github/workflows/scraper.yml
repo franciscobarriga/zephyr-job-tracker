@@ -27,11 +27,11 @@ jobs:
           pip install playwright supabase
           playwright install chromium
       
-      - name: Run V2 scraper
+      - name: Run scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: python scraper_v2.py
+        run: python scraper.py
       
       - name: Log completion
         run: |
