@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Job Applications - Zephyr{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-briefcase"></i> Job Applications</h1>
+    <a href="/dashboard" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if jobs %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Company</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Source</th>
+                        <th>Date Added</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr>
+                        <td><strong>{{ job.title }}</strong></td>
+                        <td>{{ job.company }}</td>
+                        <td>{{ job.location }}</td>
+                        <td>
+                            <span class="badge bg-secondary">{{ job.status or 'New' }}</span>
+                        </td>
+                        <td>{{ job.source or 'LinkedIn' }}</td>
+                        <td>{{ job.created_at[:10] if job.created_at else 'N/A' }}</td>
+                        <td>
+                            {% if job.url %}
+                            <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Job">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="alert alert-light">
+            <i class="bi bi-info-circle"></i> Total: <strong>{{ jobs|length }}</strong> job(s)
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No applications yet. The scraper will populate jobs when it runs!
+            <br><a href="/search" class="alert-link">Create a search config</a> to get started.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

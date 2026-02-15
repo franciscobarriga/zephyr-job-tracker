@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Zephyr{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard</h1>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.total }}</div>
+            <div class="stat-label">Total Applications</div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.applied }}</div>
+            <div class="stat-label">Applied</div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.active_searches }}</div>
+            <div class="stat-label">Active Searches</div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.week }}</div>
+            <div class="stat-label">This Week</div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Applications -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Applications</h5>
+    </div>
+    <div class="card-body">
+        {% if recent_jobs %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Company</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Link</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in recent_jobs %}
+                    <tr>
+                        <td><strong>{{ job.title }}</strong></td>
+                        <td>{{ job.company }}</td>
+                        <td>{{ job.location }}</td>
+                        <td>
+                            <span class="badge bg-secondary">{{ job.status or 'New' }}</span>
+                        </td>
+                        <td>{{ job.created_at[:10] if job.created_at else 'N/A' }}</td>
+                        <td>
+                            {% if job.url %}
+                            <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <a href="/jobs" class="btn btn-primary">
+            <i class="bi bi-briefcase"></i> View All Applications
+        </a>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No applications yet. Start by <a href="/search">creating a search config</a>!
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

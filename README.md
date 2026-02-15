@@ -1,165 +1,155 @@
-# 🌪️ Zephyr - Multi-User Job Tracker (Supabase Version)
+# 🌪️ Zephyr - Job Application Tracker
 
-Automated job application tracker with user authentication and personalized job searches.
+Automated job tracking with LinkedIn scraping, built with FastAPI and Supabase.
 
-## 🎯 What's New in V2
+## ✨ Features
 
-✅ **Multi-user support** - Each user has their own account and job list
-✅ **Custom searches** - Users define their own keywords, locations, filters
-✅ **Authentication** - Secure login with email/password
-✅ **Row-level security** - Users only see their own jobs
-✅ **Automated scraping** - Runs every 6 hours for ALL active users
-✅ **Scalable** - PostgreSQL backend (Supabase)
+- 🔐 **Secure Authentication** - Supabase-powered user accounts
+- 🌐 **Persistent Sessions** - Stay logged in across page refreshes
+- 🤖 **Automated Scraping** - LinkedIn job scraper with Playwright
+- 📊 **Analytics Dashboard** - Track applications, stats, and activity
+- 🔍 **Custom Searches** - Define keywords, locations, and filters
+- 👥 **Multi-User** - Each user has their own private dashboard
+- 🎨 **Modern UI** - Responsive Bootstrap 5 design
+
+## 🚀 Quick Start
+
+### 1. Clone & Setup
+
+```bash
+git clone <your-repo>
+cd zephyr
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Install Playwright Browsers
+
+```bash
+playwright install chromium
+```
+
+### 3. Configure Environment
+
+Create `.env` file with your Supabase credentials:
+
+```env
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_KEY=your_service_key
+SECRET_KEY=your-secret-key-for-sessions
+```
+
+### 4. Run the Application
+
+**Easy way:**
+```bash
+./start.sh
+```
+
+**Manual way:**
+```bash
+python run.py
+```
+
+Visit: **http://localhost:8000**
+
+## 📁 Project Structure
+
+```
+zephyr/
+├── app/
+│   ├── main.py              # FastAPI application
+│   ├── auth.py              # Authentication logic
+│   ├── routes/              # Route handlers
+│   │   ├── auth.py          # Login/signup/logout
+│   │   ├── dashboard.py     # Main dashboard
+│   │   ├── jobs.py          # Job listings
+│   │   └── search.py        # Search configurations
+│   ├── templates/           # Jinja2 HTML templates
+│   └── static/              # CSS, JS, images
+├── scraper.py               # LinkedIn job scraper
+├── run.py                   # Application starter
+├── start.sh                 # Quick start script
+├── requirements.txt         # Python dependencies
+└── .env                     # Configuration (not in git)
+```
+
+## 🔧 Usage
+
+### Running the Web App
+
+```bash
+./start.sh
+```
+
+Then open http://localhost:8000 in your browser.
+
+### Running the Scraper
+
+The scraper runs automatically via GitHub Actions every 6 hours, or run it manually:
+
+```bash
+python scraper.py
+```
+
+### Managing Search Configs
+
+1. Log in to the web app
+2. Navigate to "Search Configs"
+3. Add your search criteria (keywords, location, etc.)
+4. Toggle active/inactive as needed
+
+The scraper only runs for active configurations.
 
 ## 🏗️ Architecture
 
-```
-Frontend:  Streamlit (with Supabase Auth)
-Database:  Supabase PostgreSQL
-Scraper:   GitHub Actions (runs every 6 hours)
-```
+- **Frontend**: Jinja2 templates + Bootstrap 5
+- **Backend**: FastAPI (Python async framework)
+- **Database**: Supabase (PostgreSQL)
+- **Auth**: Supabase Auth with session cookies
+- **Scraper**: Playwright (headless browser)
 
-## 🚀 Deployment Steps
+## 🚢 Deployment
 
-### 1. GitHub Secrets (DONE ✅)
+### Render.com (Recommended)
 
-Already added:
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_KEY`
+1. Connect your GitHub repository
+2. Create a new Web Service
+3. Build command: `pip install -r requirements.txt && playwright install chromium`
+4. Start command: `python run.py`
+5. Add environment variables
 
-### 2. Update Your Repository
+### Railway.app
 
-Replace these files in your repo:
+1. Connect repository
+2. Add environment variables
+3. Railway auto-deploys
 
-**Core files:**
-- `scraper_supabase.py` → Rename to `scraper.py`
-- `streamlit_app_supabase.py` → Rename to `streamlit_app.py`
-- `requirements_streamlit_only.txt` → Rename to `requirements.txt`
+### Fly.io
 
-**New files:**
-- `.github/workflows/scrape-jobs.yml`
-- `.streamlit/secrets.toml` (from template)
+1. `flyctl launch`
+2. `flyctl secrets set SUPABASE_URL=...`
+3. `flyctl deploy`
 
-### 3. Deploy to Streamlit Cloud
+## 🛡️ Security
 
-1. Go to [share.streamlit.io](https://share.streamlit.io)
-2. Connect your repo: `franciscobarriga/zephyr-job-tracker`
-3. Main file: `streamlit_app.py`
-4. Add secrets:
-   ```toml
-   SUPABASE_URL = "https://ucpuvyzwlefaxieypnet.supabase.co"
-   SUPABASE_ANON_KEY = "your-anon-key-from-supabase"
-   ```
-5. Deploy!
+- ✅ Environment variables for secrets
+- ✅ Supabase Row Level Security (RLS)
+- ✅ Session-based authentication
+- ✅ Input validation
 
-### 4. Test the Scraper
+## 📝 To-Do
 
-Manually trigger GitHub Action:
-1. Go to: Actions tab in GitHub
-2. Click "Zephyr Multi-User Job Scraper"
-3. Click "Run workflow"
-4. Watch the logs
-
-## 📊 How It Works
-
-### For Users:
-1. **Sign up** → Create account with email/password
-2. **Add searches** → Define keywords, location, remote preference
-3. **Wait** → Scraper runs every 6 hours automatically
-4. **Track** → Jobs appear in your dashboard, update status
-
-### Backend:
-1. **Scraper runs** → GitHub Actions every 6 hours
-2. **Fetches configs** → Gets all active search_configs from Supabase
-3. **Scrapes LinkedIn** → For each user's keywords
-4. **Saves jobs** → To Supabase with user_id (multi-tenant isolation)
-5. **Deduplicates** → Unique constraint on (user_id, job_id)
-
-## 🔒 Security
-
-- **Row Level Security (RLS)** enabled - users can't see others' data
-- **anon key** for frontend (limited permissions)
-- **service_role key** for backend scraper (full access)
-- **GitHub Secrets** for credentials (encrypted)
-
-## 📈 Scaling
-
-Current limits:
-- **Supabase Free:** 500MB DB, 50k users, 2GB bandwidth/month
-- **GitHub Actions Free:** 2000 minutes/month
-- **Streamlit Free:** Unlimited public apps
-
-Typical usage:
-- 100 users × 2 searches × 50 jobs = 10k rows (~5MB)
-- Scraper: 10 min/run × 4 runs/day = 1200 min/month
-
-## 💡 Usage Tips
-
-**For you:**
-- Share the Streamlit URL with friends
-- They create their own accounts
-- Each manages their own searches
-
-**For your friends:**
-1. Go to Streamlit URL
-2. Click "Sign Up"
-3. Verify email
-4. Login
-5. Add job searches
-6. Check back in 6 hours!
-
-## 🐛 Troubleshooting
-
-**"Email not confirmed"**
-- Check inbox/spam for Supabase confirmation email
-- Resend from Supabase dashboard
-
-**"No jobs appearing"**
-- Check GitHub Actions logs for errors
-- Verify search_configs.is_active = true
-- LinkedIn might be rate limiting (add delays)
-
-**"Permission denied"**
-- RLS is working! User can only access their own data
-- Check user_id matches in database
-
-## 🎨 Customization
-
-**Change scraper frequency:**
-Edit `.github/workflows/scrape-jobs.yml`:
-```yaml
-schedule:
-  - cron: '0 */6 * * *'  # Every 6 hours
-  # - cron: '0 8 * * *'  # Daily at 8 AM
-```
-
-**Add OAuth login (Google/GitHub):**
-Supabase dashboard → Authentication → Providers → Enable
-
-**Custom job filters:**
-Add columns to `search_configs` table and update scraper logic
-
-## 📦 Files Explained
-
-| File | Purpose |
-|------|---------|
-| `scraper_supabase.py` | Multi-user backend scraper |
-| `streamlit_app_supabase.py` | Frontend with auth |
-| `requirements_streamlit_only.txt` | Minimal deps for frontend |
-| `.github/workflows/scrape-jobs.yml` | Automated scraping |
-| `.streamlit/secrets.toml` | Supabase credentials |
-
-## 🚀 Next Steps
-
-**Phase 3 enhancements:**
-- Email notifications for new jobs
-- Job matching score (ML)
-- Resume templates
-- Application tracking (emails sent)
-- Analytics dashboard
-- Premium tier (faster scraping)
+- [ ] Job application automation
+- [ ] More job boards (Indeed, Glassdoor)
+- [ ] Email notifications
+- [ ] Export to CSV/PDF
+- [ ] Chrome extension for one-click apply
+- [ ] Advanced filtering and sorting
+- [ ] Application status tracking
 
 ---
 
-Built with ❤️ in Madrid
+Built with ❤️ using FastAPI, Supabase, and Playwright

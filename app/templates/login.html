@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Zephyr{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="text-center mb-4">
+            <h1 class="display-4"><i class="bi bi-tornado"></i> Zephyr</h1>
+            <p class="text-muted">Automated Job Application Tracker</p>
+        </div>
+        
+        <div class="card">
+            <div class="card-body p-4">
+                <h2 class="card-title text-center mb-4">Login</h2>
+                
+                <form method="POST" action="/auth/login">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 mb-3">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </button>
+                </form>
+                
+                <div class="text-center">
+                    <p class="text-muted mb-0">Don't have an account? <a href="/auth/signup">Sign up</a></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle"></i> <strong>Note:</strong> Your session persists across page refreshes! 🎉
+        </div>
+    </div>
+</div>
+{% endblock %}
