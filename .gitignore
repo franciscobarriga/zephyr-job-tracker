@@ -52,3 +52,4 @@ scraper.log
 # OS
 .DS_Store
 Thumbs.db
+.env.save

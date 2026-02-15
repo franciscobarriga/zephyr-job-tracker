@@ -208,7 +208,7 @@ def show_dashboard(user_id):
         if not jobs_df.empty:
             st.subheader("📋 Recent Applications")
             recent_jobs = jobs_df.sort_values("created_at", ascending=False).head(10)
-            st.dataframe(recent_jobs[["job_title", "company", "status", "created_at"]], use_container_width=True)
+            st.dataframe(recent_jobs[["title", "company", "status", "created_at"]], use_container_width=True)
         else:
             st.info("No applications yet. Start by creating a search config!")
 
