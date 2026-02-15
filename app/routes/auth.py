@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from app.auth import supabase
+from app.auth import supabase, supabase_admin
 
 router = APIRouter()
 
@@ -84,13 +84,22 @@ async def signup(
             }
         })
         
-        # Create profile entry
+        # Create profile entry using admin client to bypass RLS during signup
         if response.user:
-            supabase.table("profiles").insert({
-                "id": response.user.id,
-                "username": username,
-                "full_name": full_name
-            }).execute()
+            if supabase_admin:
+                # Use admin client to bypass RLS for initial profile creation
+                supabase_admin.table("profiles").insert({
+                    "id": response.user.id,
+                    "username": username,
+                    "full_name": full_name
+                }).execute()
+            else:
+                # Fallback to regular client (will fail if RLS not configured)
+                supabase.table("profiles").insert({
+                    "id": response.user.id,
+                    "username": username,
+                    "full_name": full_name
+                }).execute()
         
         return templates.TemplateResponse(
             "login.html",

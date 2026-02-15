@@ -4,16 +4,22 @@ Authentication utilities and Supabase client
 
 from fastapi import Request, HTTPException, status
 from supabase import create_client, Client
+from typing import Optional
 import os
 
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_ANON_KEY:
     raise ValueError("Missing Supabase credentials in environment")
 
+# Main client for regular operations (with RLS)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+# Admin client for bypassing RLS (use sparingly, only for signup profile creation)
+supabase_admin: Optional[Client] = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY) if SUPABASE_SERVICE_KEY else None
 
 
 async def get_current_user(request: Request):
