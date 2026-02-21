@@ -2,9 +2,9 @@ name: Zephyr Job Scraper V2
 
 on:
   schedule:
-    # Runs every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
-    - cron: '0 */6 * * *'
-  
+    # Runs twice a day (00:00 and 12:00 UTC)
+    - cron: '0 0,12 * * *'
+
   # Manual trigger
   workflow_dispatch:
 
@@ -24,16 +24,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install playwright supabase
+          pip install playwright supabase python-dotenv
           playwright install chromium
       
       - name: Run scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: python scraper.py
       
       - name: Log completion
         run: |
-          echo "✅ Scraper V2 completed at $(date)"
+          echo "✅ Scraper completed with AI analysis at $(date)"
 

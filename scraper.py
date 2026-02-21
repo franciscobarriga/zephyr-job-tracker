@@ -8,6 +8,8 @@ import asyncio
 import hashlib
 import re
 import random
+import json
+import requests
 from datetime import datetime, timedelta
 from urllib.parse import quote_plus
 from dotenv import load_dotenv
@@ -241,6 +243,149 @@ def extract_work_type(metadata_text):
     return None
 
 
+def analyze_job(description: str, retries: int = 3) -> dict:
+    """Analyze job posting using Ollama LLM to extract summary and requirements"""
+    if not description:
+        return {"summary": "—", "requirements": ""}
+
+    for attempt in range(retries):
+        try:
+            response = requests.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "llama3.2:latest",
+                    "prompt": f"""
+Analyze this job posting and return ONLY valid JSON:
+{{
+    "summary": "2-3 sentences: what the company does, the role, YOE if stated",
+    "requirements": ["tool1", "skill2", "technology3"]
+}}
+
+Rules:
+- summary: concise, mention YOE only if explicitly stated
+- requirements: only hard skills and tools, no soft skills, no labels like "(inferred)"
+- requirements: return an empty list [] if no tools or hard skills can be identified
+
+Job posting:
+{description[:3000]}
+""",
+                    "stream": False
+                },
+                timeout=120
+            )
+
+            if not response.text.strip():
+                print(f"  ⚠️  Empty response, retrying ({attempt + 1}/{retries})...")
+                continue
+
+            raw = response.json()["response"].strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            parsed = json.loads(raw.strip())
+
+            reqs = [r.replace("(inferred)", "").strip() for r in parsed.get("requirements", [])]
+            reqs = [r for r in reqs if r]  # drop anything that was only "(inferred)"
+            return {
+                "summary": parsed.get("summary", "—"),
+                "requirements": ", ".join(reqs) if reqs else ""
+            }
+
+        except Exception as e:
+            print(f"  ⚠️  Attempt {attempt + 1} failed: {e}")
+            continue
+
+    return {"summary": "—", "requirements": ""}
+
+
+
+
+async def get_job_description(page, job_url):
+    """Visit job detail page and extract description"""
+    try:
+        await page.goto(job_url, wait_until="domcontentloaded", timeout=15000)
+        await asyncio.sleep(2)  # Wait for content to load
+
+        # Try multiple selectors for job description
+        description = None
+
+        selectors = [
+            ".jobs-description__content",
+            ".job-view-layout .jobs-box",
+            ".jobs-description__body",
+            "[data-test-id='job-details']",
+            ".jobs-details__main-content",
+        ]
+
+        for selector in selectors:
+            elem = await page.query_selector(selector)
+            if elem:
+                description = await elem.inner_text()
+                if description and len(description) > 50:
+                    break
+
+        if not description:
+            # Fallback: get all paragraph text
+            paragraphs = await page.query_selector_all("p, li")
+            description_parts = []
+            for p in paragraphs[:10]:  # Limit to first 10
+                text = await p.inner_text()
+                if text and len(text) > 20:
+                    description_parts.append(text)
+            description = " ".join(description_parts)
+
+        return description[:10000] if description else None  # Limit length
+
+    except Exception as e:
+        print(f"    ⚠️  Error getting job description: {e}")
+        return None
+
+
+async def analyze_new_jobs(user_id, jobs_data):
+    """Visit each new job URL and run AI analysis"""
+    if not jobs_data:
+        return
+
+    print(f"  🤖 Running AI analysis on {len(jobs_data)} new jobs...")
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+
+        analyzed = 0
+        for job in jobs_data:
+            try:
+                # Get job description
+                description = await get_job_description(page, job["url"])
+
+                if description:
+                    # Run AI analysis
+                    print(f"    📝 Analyzing: {job['title'][:30]}...")
+                    analysis = analyze_job(description)
+
+                    # Update job with AI analysis
+                    supabase.table("jobs").update({
+                        "ai_summary": analysis.get("summary"),
+                        "ai_requirements": analysis.get("requirements")
+                    }).eq("id", job["id"]).execute()
+
+                    analyzed += 1
+                    await human_delay(1, 3)  # Rate limit between AI calls
+                else:
+                    print(f"    ⚠️  No description found for: {job['title'][:30]}")
+
+            except Exception as e:
+                print(f"    ⚠️  Error analyzing job: {e}")
+                continue
+
+        await browser.close()
+
+    print(f"  ✅ AI analysis complete: {analyzed} jobs analyzed")
+
+    print(f"  ✅ AI analysis complete: {analyzed} jobs analyzed")
+
+
 async def scrape_linkedin_jobs(keywords, location, pages=1):
     """Scrape LinkedIn jobs using Playwright with human-like behavior"""
     jobs = []
@@ -455,11 +600,28 @@ async def scrape_for_user(user_id, config):
                 "applicants_count": job.get("applicants_count"),
                 "easy_apply": job.get("easy_apply"),
             }).execute()
-            
+
             new_jobs += 1
-        
+
         print(f"  ✅ Saved {new_jobs} new jobs")
-        
+
+        # Run AI analysis on new jobs
+        if new_jobs > 0:
+            # Get the newly inserted jobs with their IDs
+            new_job_list = []
+            for job in jobs:
+                existing = supabase.table("jobs")\
+                    .select("id, title, url")\
+                    .eq("job_hash", job["job_hash"])\
+                    .eq("user_id", user_id)\
+                    .execute()
+                if existing.data:
+                    new_job_list.append(existing.data[0])
+
+            # Run AI analysis
+            if new_job_list:
+                await analyze_new_jobs(user_id, new_job_list)
+
     except Exception as e:
         print(f"  ❌ Database error: {e}")
     
