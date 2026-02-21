@@ -1,93 +1,229 @@
 {% extends "base.html" %}
 
-{% block title %}Job Applications - Zephyr{% endblock %}
+{% block title %}Job Board - Zephyr{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-briefcase"></i> Job Applications</h1>
-    <a href="/dashboard" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Back to Dashboard
+<div class="page-header">
+    <div class="page-title">
+        <h1 class="mb-0"><i class="bi bi-layout-text-sidebar-reverse"></i> Job Board</h1>
+    </div>
+    <a href="/dashboard" class="btn btn-zephyr-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
     </a>
 </div>
 
+<!-- Filter Tabs -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="text-muted me-2"><i class="bi bi-filter me-1"></i>Filter:</span>
+            <a href="/job-board" class="btn btn-sm {% if not status_filter or status_filter == 'all' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
+                All <span class="badge bg-light text-dark ms-1">{{ stats.new + stats.thinking + stats.ignored }}</span>
+            </a>
+            <a href="/job-board?status_filter=New" class="btn btn-sm {% if status_filter == 'New' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
+                <i class="bi bi-stars me-1"></i>New <span class="badge bg-light text-dark ms-1">{{ stats.new }}</span>
+            </a>
+            <a href="/job-board?status_filter=Thinking" class="btn btn-sm {% if status_filter == 'Thinking' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
+                <i class="bi bi-hourglass-split me-1"></i>Thinking <span class="badge bg-light text-dark ms-1">{{ stats.thinking }}</span>
+            </a>
+            <a href="/job-board?status_filter=Ignored" class="btn btn-sm {% if status_filter == 'Ignored' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
+                <i class="bi bi-x-circle me-1"></i>Ignored <span class="badge bg-light text-dark ms-1">{{ stats.ignored }}</span>
+            </a>
+            <span class="ms-auto text-muted small">
+                <i class="bi bi-info-circle me-1"></i>Applied jobs shown in Dashboard
+            </span>
+        </div>
+    </div>
+</div>
+
 <div class="card">
-    <div class="card-body">
+    <div class="card-body p-0">
         {% if jobs %}
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Title</th>
+                        <th>Position</th>
                         <th>Company</th>
                         <th>Location</th>
                         <th>Status</th>
                         <th>Source</th>
-                        <th>Date Added</th>
-                        <th>Actions</th>
+                        <th>Date</th>
+                        <th style="width: 180px;"></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for job in jobs %}
                     <tr>
-                        <td><strong>{{ job.title }}</strong></td>
+                        <td>
+                            <strong>{{ job.title }}</strong>
+                        </td>
                         <td>{{ job.company }}</td>
-                        <td>{{ job.location }}</td>
+                        <td>
+                            {% if job.location %}
+                            <i class="bi bi-geo-alt me-1 text-muted"></i>{{ job.location }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
                         <td>
                             {% set status = job.status or 'New' %}
                             {% if status == 'Applied' %}
-                                <span class="badge bg-success">Applied</span>
+                                <span class="badge badge-status badge-applied">
+                                    <i class="bi bi-check-circle me-1"></i>Applied
+                                </span>
                             {% elif status == 'Thinking' %}
-                                <span class="badge bg-warning">Thinking</span>
+                                <span class="badge badge-status badge-thinking">
+                                    <i class="bi bi-hourglass-split me-1"></i>Thinking
+                                </span>
                             {% elif status == 'Ignored' %}
-                                <span class="badge bg-secondary">Ignored</span>
+                                <span class="badge badge-status badge-ignored">
+                                    <i class="bi bi-x-circle me-1"></i>Ignored
+                                </span>
                             {% else %}
-                                <span class="badge bg-info">New</span>
+                                <span class="badge badge-status badge-new">
+                                    <i class="bi bi-stars me-1"></i>New
+                                </span>
                             {% endif %}
                         </td>
-                        <td>{{ job.source or 'LinkedIn' }}</td>
-                        <td>{{ job.created_at[:10] if job.created_at else 'N/A' }}</td>
-                        <td class="d-flex gap-1">
-                            <!-- Status Toggle Buttons -->
-                            <div class="btn-group btn-group-sm" role="group">
-                                <form method="POST" action="/jobs/{{ job.id }}/update-status" style="display: inline;">
-                                    <input type="hidden" name="status" value="Applied">
-                                    <button type="submit" class="btn {% if status == 'Applied' %}btn-success{% else %}btn-outline-success{% endif %}" title="Mark as Applied">
-                                        <i class="bi bi-check-circle"></i>
-                                    </button>
-                                </form>
-                                <form method="POST" action="/jobs/{{ job.id }}/update-status" style="display: inline;">
-                                    <input type="hidden" name="status" value="Thinking">
-                                    <button type="submit" class="btn {% if status == 'Thinking' %}btn-warning{% else %}btn-outline-warning{% endif %}" title="Mark as Thinking">
-                                        <i class="bi bi-hourglass-split"></i>
-                                    </button>
-                                </form>
-                                <form method="POST" action="/jobs/{{ job.id }}/update-status" style="display: inline;">
-                                    <input type="hidden" name="status" value="Ignored">
-                                    <button type="submit" class="btn {% if status == 'Ignored' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" title="Mark as Ignored">
-                                        <i class="bi bi-x-circle"></i>
-                                    </button>
-                                </form>
+                        <td>
+                            <span class="text-muted">{{ job.source or 'LinkedIn' }}</span>
+                        </td>
+                        <td class="text-muted">
+                            {{ job.created_at[:10] if job.created_at else 'N/A' }}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <!-- Status Toggle Group -->
+                                <div class="btn-group btn-group-sm" role="group" aria-label="Status actions">
+                                    <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
+                                        <input type="hidden" name="status" value="Applied">
+                                        <button type="submit" class="btn {% if status == 'Applied' %}btn-success{% else %}btn-outline-success{% endif %}" title="Mark as Applied" {% if status == 'Applied' %}disabled{% endif %}>
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
+                                        <input type="hidden" name="status" value="Thinking">
+                                        <button type="submit" class="btn {% if status == 'Thinking' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %}" title="Mark as Thinking" {% if status == 'Thinking' %}disabled{% endif %}>
+                                            <i class="bi bi-hourglass"></i>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
+                                        <input type="hidden" name="status" value="Ignored">
+                                        <button type="submit" class="btn {% if status == 'Ignored' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" title="Mark as Ignored" {% if status == 'Ignored' %}disabled{% endif %}>
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                {% if job.url %}
+                                <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Job">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                                {% endif %}
                             </div>
-                            {% if job.url %}
-                            <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary ms-2" title="View Job">
-                                <i class="bi bi-box-arrow-up-right"></i>
-                            </a>
-                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        <div class="alert alert-light">
-            <i class="bi bi-info-circle"></i> Total: <strong>{{ jobs|length }}</strong> job(s)
+        <div class="card-footer bg-transparent">
+            <span class="text-muted">
+                Showing {{ jobs|length }} jobs
+            </span>
         </div>
         {% else %}
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No applications yet. The scraper will populate jobs when it runs!
-            <br><a href="/search" class="alert-link">Create a search config</a> to get started.
+        <div class="text-center py-5">
+            <i class="bi bi-briefcase" style="font-size: 4rem; color: var(--zephyr-foam);"></i>
+            <h4 class="mt-3">No jobs in board</h4>
+            <p class="text-muted">
+                {% if status_filter %}
+                No jobs with status "{{ status_filter }}". Try another filter or
+                {% endif %}
+                The scraper will find new jobs for you!
+            </p>
+            <a href="/search" class="btn btn-zephyr mt-2">
+                <i class="bi bi-plus-lg me-2"></i>Create Search Config
+            </a>
         </div>
         {% endif %}
     </div>
 </div>
+
+<style>
+    /* Job Board specific styles */
+    .btn-success {
+        background-color: #10B981;
+        border-color: #10B981;
+    }
+
+    .btn-success:hover, .btn-success:focus {
+        background-color: #059669;
+        border-color: #059669;
+    }
+
+    .btn-success:disabled {
+        opacity: 1;
+    }
+
+    .btn-outline-success {
+        border-color: #10B981;
+        color: #10B981;
+    }
+
+    .btn-outline-success:hover {
+        background-color: #10B981;
+        border-color: #10B981;
+        color: white;
+    }
+
+    .btn-warning {
+        background-color: #F59E0B;
+        border-color: #F59E0B;
+        color: white;
+    }
+
+    .btn-warning:hover, .btn-warning:focus {
+        background-color: #D97706;
+        border-color: #D97706;
+        color: white;
+    }
+
+    .btn-warning:disabled {
+        opacity: 1;
+    }
+
+    .btn-outline-warning {
+        border-color: #F59E0B;
+        color: #F59E0B;
+    }
+
+    .btn-outline-warning:hover {
+        background-color: #F59E0B;
+        border-color: #F59E0B;
+        color: white;
+    }
+
+    .btn-outline-secondary {
+        border-color: var(--border);
+        color: var(--text-secondary);
+    }
+
+    .btn-outline-secondary:hover {
+        background: var(--zephyr-foam);
+        border-color: var(--zephyr-breeze);
+        color: var(--zephyr-deep);
+    }
+
+    .btn-outline-primary {
+        border-color: var(--zephyr-breeze);
+        color: var(--zephyr-breeze);
+    }
+
+    .btn-outline-primary:hover {
+        background: var(--zephyr-breeze);
+        border-color: var(--zephyr-breeze);
+        color: white;
+    }
+</style>
 {% endblock %}

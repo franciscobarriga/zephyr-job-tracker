@@ -3,42 +3,191 @@
 {% block title %}Login - Zephyr{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-5">
-    <div class="col-md-5">
-        <div class="text-center mb-4">
-            <h1 class="display-4"><i class="bi bi-tornado"></i> Zephyr</h1>
-            <p class="text-muted">Automated Job Application Tracker</p>
+<div class="auth-container">
+    <div class="auth-card">
+        <!-- Logo & Branding -->
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="bi bi-wind"></i>
+            </div>
+            <h1>Zephyr</h1>
+            <p class="text-muted">Ride the winds of change in your career</p>
         </div>
-        
-        <div class="card">
-            <div class="card-body p-4">
-                <h2 class="card-title text-center mb-4">Login</h2>
-                
-                <form method="POST" action="/auth/login">
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
+
+        <!-- Login Form -->
+        <div class="auth-form">
+            <h2 class="auth-title">Welcome back</h2>
+            <p class="auth-subtitle">Sign in to continue your journey</p>
+
+            <form method="POST" action="/auth/login">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100 mb-3">
-                        <i class="bi bi-box-arrow-in-right"></i> Login
-                    </button>
-                </form>
-                
-                <div class="text-center">
-                    <p class="text-muted mb-0">Don't have an account? <a href="/auth/signup">Sign up</a></p>
                 </div>
+
+                <div class="mb-4">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-zephyr w-100">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p class="text-muted mb-0">Don't have an account? <a href="/auth/signup">Create one</a></p>
             </div>
         </div>
-        
-        <div class="alert alert-info mt-3">
-            <i class="bi bi-info-circle"></i> <strong>Note:</strong> Your session persists across page refreshes! 🎉
+
+        <!-- Wind Decoration -->
+        <div class="auth-decoration">
+            <i class="bi bi-wind"></i>
         </div>
     </div>
 </div>
+
+<style>
+    .auth-container {
+        min-height: calc(100vh - 100px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+    }
+
+    .auth-card {
+        background: var(--bg-card);
+        border-radius: 24px;
+        box-shadow: var(--shadow-xl);
+        width: 100%;
+        max-width: 440px;
+        padding: 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .auth-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: linear-gradient(90deg, var(--zephyr-deep), var(--zephyr-breeze), var(--zephyr-gold));
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .auth-logo {
+        width: 72px;
+        height: 72px;
+        background: linear-gradient(135deg, var(--zephyr-deep) 0%, var(--zephyr-ocean) 100%);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        box-shadow: 0 8px 20px rgba(11, 79, 108, 0.3);
+    }
+
+    .auth-logo i {
+        font-size: 2rem;
+        color: white;
+    }
+
+    .auth-header h1 {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, var(--zephyr-deep) 0%, var(--zephyr-breeze) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .auth-header p {
+        font-size: 0.95rem;
+    }
+
+    .auth-form {
+        position: relative;
+        z-index: 1;
+    }
+
+    .auth-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+        text-align: center;
+    }
+
+    .auth-subtitle {
+        text-align: center;
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+    }
+
+    .input-group-text {
+        background: var(--zephyr-foam);
+        border: 1px solid var(--border);
+        border-right: none;
+        color: var(--text-muted);
+    }
+
+    .input-group .form-control {
+        border-left: none;
+    }
+
+    .input-group .form-control:focus {
+        border-left: none;
+    }
+
+    .input-group:focus-within .input-group-text {
+        border-color: var(--zephyr-breeze);
+        color: var(--zephyr-breeze);
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .auth-footer a {
+        color: var(--zephyr-breeze);
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .auth-footer a:hover {
+        text-decoration: underline;
+    }
+
+    .auth-decoration {
+        position: absolute;
+        bottom: -30px;
+        right: -30px;
+        font-size: 12rem;
+        color: var(--zephyr-foam);
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+        .auth-card {
+            padding: 2rem;
+        }
+    }
+</style>
 {% endblock %}

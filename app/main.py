@@ -35,7 +35,7 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
-app.include_router(jobs.router, prefix="/jobs", tags=["Jobs"])
+app.include_router(jobs.router, prefix="/job-board", tags=["Job Board"])
 app.include_router(search.router, prefix="/search", tags=["Search Configs"])
 
 

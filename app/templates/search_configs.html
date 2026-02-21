@@ -3,43 +3,45 @@
 {% block title %}Search Configs - Zephyr{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-search"></i> Search Configurations</h1>
-    <a href="/dashboard" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Back to Dashboard
+<div class="page-header">
+    <div class="page-title">
+        <h1 class="mb-0"><i class="bi bi-search"></i> Search Configurations</h1>
+    </div>
+    <a href="/dashboard" class="btn btn-zephyr-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
     </a>
 </div>
 
 <!-- Add New Search -->
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add New Search</h5>
+        <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Add New Search</h5>
     </div>
     <div class="card-body">
         <form method="POST" action="/search/create">
-            <div class="row">
-                <div class="col-md-4 mb-3">
+            <div class="row g-3">
+                <div class="col-md-4">
                     <label for="keywords" class="form-label">Keywords</label>
                     <input type="text" class="form-control" id="keywords" name="keywords" placeholder="e.g., Data Analyst" required>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-4">
                     <label for="location" class="form-label">Location</label>
                     <input type="text" class="form-control" id="location" name="location" placeholder="e.g., New York, NY" required>
                 </div>
-                <div class="col-md-2 mb-3">
+                <div class="col-md-2">
                     <label for="pages" class="form-label">Pages</label>
                     <input type="number" class="form-control" id="pages" name="pages" value="2" min="1" max="10" required>
                 </div>
-                <div class="col-md-2 mb-3">
+                <div class="col-md-2">
                     <label class="form-label d-block">&nbsp;</label>
-                    <div class="form-check">
+                    <div class="form-check form-switch mt-2">
                         <input type="checkbox" class="form-check-input" id="is_remote" name="is_remote" value="true">
                         <label class="form-check-label" for="is_remote">Remote Only</label>
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-4 mb-3">
+            <div class="row g-3 mt-2">
+                <div class="col-md-4">
                     <label for="experience_level" class="form-label">Experience Level</label>
                     <select class="form-select" id="experience_level" name="experience_level">
                         <option value="">Any</option>
@@ -49,10 +51,10 @@
                         <option value="Executive">Executive</option>
                     </select>
                 </div>
-                <div class="col-md-8 mb-3">
+                <div class="col-md-8">
                     <label class="form-label d-block">&nbsp;</label>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save"></i> Create Search Config
+                    <button type="submit" class="btn btn-zephyr">
+                        <i class="bi bi-save me-2"></i>Create Search Config
                     </button>
                 </div>
             </div>
@@ -63,7 +65,7 @@
 <!-- Existing Configs -->
 <div class="card">
     <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Your Search Configurations</h5>
+        <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Your Search Configurations</h5>
     </div>
     <div class="card-body">
         {% if configs %}
@@ -73,23 +75,34 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="mb-1">
-                            <strong>{{ config.keywords }}</strong> - {{ config.location }}
+                            <strong>{{ config.keywords }}</strong>
+                            <span class="text-muted">- {{ config.location }}</span>
                             {% if config.is_active %}
-                            <span class="badge badge-active">Active</span>
+                            <span class="badge badge-status badge-active-search ms-2">Active</span>
                             {% else %}
-                            <span class="badge badge-inactive">Inactive</span>
+                            <span class="badge badge-status badge-inactive-search ms-2">Inactive</span>
                             {% endif %}
                         </h6>
                         <small class="text-muted">
-                            Pages: {{ config.pages }} | 
-                            {% if config.is_remote %}Remote{% else %}On-site{% endif %}
-                            {% if config.experience_level %} | {{ config.experience_level }}{% endif %}
+                            <i class="bi bi-file-earmark-text me-1"></i>{{ config.pages }} pages
+                            {% if config.is_remote %}
+                            <span class="ms-2"><i class="bi bi-house me-1"></i>Remote</span>
+                            {% else %}
+                            <span class="ms-2"><i class="bi bi-building me-1"></i>On-site</span>
+                            {% endif %}
+                            {% if config.experience_level %}
+                            <span class="ms-2"><i class="bi bi-person me-1"></i>{{ config.experience_level }}</span>
+                            {% endif %}
                         </small>
                     </div>
-                    <div class="btn-group">
+                    <div class="btn-group" role="group">
                         <form method="POST" action="/search/{{ config.id }}/toggle" style="display: inline;">
-                            <button type="submit" class="btn btn-sm btn-outline-primary" title="Toggle Active">
-                                <i class="bi bi-toggle-{% if config.is_active %}on{% else %}off{% endif %}"></i>
+                            <button type="submit" class="btn btn-sm btn-zephyr-secondary" title="Toggle Active">
+                                {% if config.is_active %}
+                                <i class="bi bi-pause-fill"></i>
+                                {% else %}
+                                <i class="bi bi-play-fill"></i>
+                                {% endif %}
                             </button>
                         </form>
                         <form method="POST" action="/search/{{ config.id }}/delete" style="display: inline;" onsubmit="return confirm('Delete this search config?');">
@@ -103,10 +116,25 @@
             {% endfor %}
         </div>
         {% else %}
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No search configs yet. Create one above to start scraping jobs!
+        <div class="text-center py-4">
+            <i class="bi bi-search" style="font-size: 3rem; color: var(--zephyr-foam);"></i>
+            <h5 class="mt-3">No search configs yet</h5>
+            <p class="text-muted">Create one above to start scraping jobs!</p>
         </div>
         {% endif %}
     </div>
 </div>
+
+<style>
+    .btn-outline-danger {
+        border-color: var(--danger);
+        color: var(--danger);
+    }
+
+    .btn-outline-danger:hover {
+        background: var(--danger);
+        border-color: var(--danger);
+        color: white;
+    }
+</style>
 {% endblock %}
