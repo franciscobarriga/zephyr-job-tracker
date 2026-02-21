@@ -154,4 +154,4 @@ The scraper only runs for active configurations.
 
 Built with ❤️ using FastAPI, Supabase, and Playwright
  
-Peepee poopoo
+Peepee
