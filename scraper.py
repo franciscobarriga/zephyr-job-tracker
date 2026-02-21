@@ -1,25 +1,119 @@
 """
-Zephyr Job Scraper V3 - Enhanced Version
-Scrapes additional fields from LinkedIn for richer job data
+Zephyr Job Scraper V4 - Human-like Behavior Version
+Scrapes LinkedIn with anti-detection features
 """
 
 import os
 import asyncio
 import hashlib
 import re
-from datetime import datetime
+import random
+from datetime import datetime, timedelta
 from urllib.parse import quote_plus
+from dotenv import load_dotenv
 from supabase import create_client, Client
 from playwright.async_api import async_playwright
 
+# Load environment variables
+load_dotenv()
+
 # Configuration
 SCRAPE_DELAY = 3  # seconds between users
+
+# Human-like behavior settings
+MIN_DELAY = 1.0   # minimum delay between actions (seconds)
+MAX_DELAY = 4.0   # maximum delay between actions (seconds)
+MIN_SCROLL = 100   # minimum scroll distance
+MAX_SCROLL = 400   # maximum scroll distance
 
 # Initialize Supabase client
 supabase: Client = create_client(
     os.environ.get("SUPABASE_URL"),
     os.environ.get("SUPABASE_SERVICE_KEY")
 )
+
+
+# ============== Human-like Behavior Functions ==============
+
+async def human_delay(min_seconds=None, max_seconds=None):
+    """Random delay to simulate human thinking/reading time"""
+    min_sec = min_seconds or MIN_DELAY
+    max_sec = max_seconds or MAX_DELAY
+    delay = random.uniform(min_sec, max_sec)
+    await asyncio.sleep(delay)
+
+
+async def human_mouse_move(page):
+    """Move mouse randomly to simulate human browsing"""
+    # Get viewport size
+    viewport = page.viewport_size
+    if not viewport:
+        return
+
+    # Do 2-4 random movements
+    for _ in range(random.randint(2, 4)):
+        x = random.randint(50, viewport['width'] - 50)
+        y = random.randint(50, viewport['height'] - 50)
+
+        # Move to position with random duration
+        await page.mouse.move(x, y)
+        await asyncio.sleep(random.uniform(0.1, 0.3))
+
+
+async def human_scroll(page):
+    """Scroll like a human - not smooth, with random pauses"""
+    viewport = page.viewport_size
+    if not viewport:
+        return
+
+    # Do multiple scroll "stops" like a human reading
+    scroll_pauses = random.randint(3, 6)
+
+    for _ in range(scroll_pauses):
+        # Random mouse movement first
+        await human_mouse_move(page)
+
+        # Then scroll a random amount
+        scroll_amount = random.randint(MIN_SCROLL, MAX_SCROLL)
+        await page.mouse.wheel(0, scroll_amount)
+
+        # Random pause to "read" content
+        await human_delay(0.5, 1.5)
+
+
+async def human_click(page, selector):
+    """Click with human-like delay and movement"""
+    try:
+        # Move mouse to element area first
+        await human_mouse_move(page)
+
+        # Click
+        await page.click(selector)
+        await human_delay(0.2, 0.5)
+    except Exception:
+        pass  # Element might not exist, that's ok
+
+
+def random_user_agent():
+    """Return a random user agent string"""
+    user_agents = [
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+    ]
+    return random.choice(user_agents)
+
+
+def random_viewport():
+    """Return random viewport dimensions"""
+    viewports = [
+        {'width': 1280, 'height': 800},
+        {'width': 1366, 'height': 768},
+        {'width': 1440, 'height': 900},
+        {'width': 1920, 'height': 1080},
+    ]
+    return random.choice(viewports)
 
 
 def generate_job_hash(title, company, location):
@@ -148,14 +242,46 @@ def extract_work_type(metadata_text):
 
 
 async def scrape_linkedin_jobs(keywords, location, pages=1):
-    """Scrape LinkedIn jobs using Playwright"""
+    """Scrape LinkedIn jobs using Playwright with human-like behavior"""
     jobs = []
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+        # Launch browser with stealth settings
+        browser = await p.chromium.launch(
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+            ]
         )
+
+        # Use random user agent and viewport
+        ua = random_user_agent()
+        vp = random_viewport()
+
+        context = await browser.new_context(
+            user_agent=ua,
+            viewport=vp,
+            locale="en-US",
+            timezone_id="America/New_York",
+        )
+
+        # Inject stealth scripts to hide automation
+        await context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5]
+            });
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['en-US', 'en']
+            });
+            window.chrome = { runtime: {} };
+        """)
+
         page = await context.new_page()
 
         for page_num in range(pages):
@@ -170,8 +296,14 @@ async def scrape_linkedin_jobs(keywords, location, pages=1):
             print(f"  🔍 Page {page_num + 1}: {url}")
 
             try:
-                await page.goto(url, wait_until="networkidle", timeout=30000)
-                await page.wait_for_selector(".job-search-card", timeout=10000)
+                # Navigate with human-like delay first
+                await human_delay(1, 3)
+                await page.goto(url, wait_until="networkidle", timeout=45000)
+
+                # Human-like scroll after page load
+                await human_scroll(page)
+
+                await page.wait_for_selector(".job-search-card", timeout=15000)
 
                 job_cards = await page.query_selector_all(".job-search-card")
 
@@ -193,35 +325,43 @@ async def scrape_linkedin_jobs(keywords, location, pages=1):
                         job_url = job_url.split("?")[0] if job_url else None
 
                         # Enhanced fields - try to extract from metadata
-                        metadata_elem = await card.query_selector(".job-search-card__metadata")
+                        # LinkedIn changed selectors - use base-search-card__metadata
+                        metadata_elem = await card.query_selector(".base-search-card__metadata")
                         metadata_text = await metadata_elem.inner_text() if metadata_elem else ""
 
-                        salary_elem = await card.query_selector(".job-card-container__salary-info")
-                        salary_text = await salary_elem.inner_text() if salary_elem else ""
-
-                        # Extract all the new fields
-                        salary_min, salary_max, salary_currency = extract_salary(salary_text)
-                        job_type = extract_job_type(metadata_text)
-                        experience_level = extract_experience_level(metadata_text)
-                        work_type = extract_work_type(metadata_text)
-
-                        # Try to get posted date from another element
-                        posted_elem = await card.query_selector(".job-card-container__listed-time")
+                        # Try to get posted date - check both the listdate element AND metadata
+                        posted_elem = await card.query_selector(".job-search-card__listdate")
                         posted_text = await posted_elem.inner_text() if posted_elem else ""
+
+                        # If not in listdate, try to extract from metadata text
+                        if not posted_text and metadata_text:
+                            # Look for patterns like "2 days ago", "1 week ago" in metadata
+                            import re
+                            match = re.search(r'(\d+\s*(?:day|week|hour|minute|month)s?\s*ago)', metadata_text, re.IGNORECASE)
+                            if match:
+                                posted_text = match.group(1)
+
                         posted_date = extract_posted_date(posted_text)
 
-                        # Try to get applicants count
-                        applicants_elem = await card.query_selector(".job-card-container__ApplicantCount")
-                        applicants_text = await applicants_elem.inner_text() if applicants_elem else ""
-                        applicants_count = None
-                        if applicants_text:
-                            app_match = re.search(r'(\d+)', applicants_text.replace(",", ""))
-                            if app_match:
-                                applicants_count = int(app_match.group(1))
+                        # Try to get work type from location (remote/hybrid keywords)
+                        work_type = extract_work_type(job_location)
 
-                        # Easy apply badge
-                        easy_apply_elem = await card.query_selector(".job-card-container__apply-method")
-                        easy_apply = easy_apply_elem is not None
+                        # Salary not available on job cards anymore - requires clicking into job
+                        salary_min = None
+                        salary_max = None
+                        salary_currency = None
+
+                        # Job type - extract from metadata if present
+                        job_type = extract_job_type(metadata_text)
+
+                        # Experience level - extract from metadata if present
+                        experience_level = extract_experience_level(metadata_text)
+
+                        # Applicants - not available on card
+                        applicants_count = None
+
+                        # Easy apply - not available on card
+                        easy_apply = False
 
                         job_hash = generate_job_hash(title, company, job_location)
 
@@ -247,7 +387,8 @@ async def scrape_linkedin_jobs(keywords, location, pages=1):
                         print(f"    ⚠️  Error parsing job card: {e}")
                         continue
 
-                await asyncio.sleep(2)
+                # Human-like delay between pages
+                await human_delay(2, 5)
 
             except Exception as e:
                 print(f"    ❌ Error on page {page_num + 1}: {e}")
