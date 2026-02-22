@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1e3a5f">
     <title>{% block title %}Zephyr - Job Tracker{% endblock %}</title>
 
     <!-- Fonts -->
@@ -572,12 +575,27 @@
         .animate-delay-4 { animation-delay: 0.4s; }
 
         /* ============================================
-           RESPONSIVE
+           RESPONSIVE & MOBILE APP-LIKE
            ============================================ */
 
         @media (max-width: 768px) {
+            /* App-like mobile styles */
+            body {
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+
+            .container-fluid {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
             .stat-number {
-                font-size: 2rem;
+                font-size: 1.8rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
             }
 
             .page-header {
@@ -586,8 +604,103 @@
                 gap: 1rem;
             }
 
+            .page-title h1 {
+                font-size: 1.5rem;
+            }
+
+            .navbar-zephyr {
+                padding: 0.5rem 0;
+            }
+
             .navbar-zephyr .user-menu span {
                 display: none;
+            }
+
+            /* Mobile table fixes */
+            .table {
+                font-size: 0.875rem;
+            }
+
+            .table th, .table td {
+                padding: 0.5rem 0.25rem;
+            }
+
+            /* Touch-friendly buttons */
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+                padding: 0.5rem 1rem;
+            }
+
+            .btn-sm {
+                min-height: 36px;
+                min-width: 36px;
+            }
+
+            /* Mobile card improvements */
+            .card {
+                border-radius: 12px;
+                margin-bottom: 1rem;
+            }
+
+            /* Mobile nav improvements */
+            .navbar-toggler {
+                padding: 0.5rem;
+            }
+
+            .nav-link {
+                padding: 0.75rem 1rem;
+                min-height: 44px;
+            }
+
+            /* Mobile form controls */
+            .form-control, .form-select {
+                min-height: 44px;
+                font-size: 16px; /* Prevents iOS zoom */
+            }
+
+            /* Sticky bottom nav for mobile */
+            .mobile-nav {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                border-top: 1px solid #eee;
+                padding: 0.5rem;
+                z-index: 1000;
+                justify-content: space-around;
+            }
+
+            .mobile-nav a {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 0.5rem;
+                color: #6c757d;
+                text-decoration: none;
+                font-size: 0.75rem;
+            }
+
+            .mobile-nav a.active {
+                color: var(--zephyr-deep);
+            }
+
+            .mobile-nav i {
+                font-size: 1.25rem;
+            }
+
+            /* Body padding for bottom nav */
+            body.has-mobile-nav {
+                padding-bottom: 70px;
+            }
+        }
+
+        /* Hide mobile nav on desktop */
+        @media (min-width: 769px) {
+            .mobile-nav {
+                display: none !important;
             }
         }
 

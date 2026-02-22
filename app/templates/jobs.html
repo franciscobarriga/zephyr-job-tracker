@@ -292,5 +292,89 @@ function toggleJobDetails(jobId) {
     .expand-icon {
         transition: transform 0.2s ease;
     }
+
+    /* Mobile App-Like Styles */
+    @media (max-width: 768px) {
+        /* Hide table headers on mobile */
+        #jobsTable thead {
+            display: none;
+        }
+
+        /* Card-style rows on mobile */
+        #jobsTable tbody tr.job-row {
+            display: block;
+            background: white;
+            border-radius: 12px;
+            margin: 0 0 0.75rem 0;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        #jobsTable tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.4rem 0;
+            border: none;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        #jobsTable tbody td:last-child {
+            border-bottom: none;
+            padding-top: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        #jobsTable td:nth-child(1):before { content: ''; display: none; }
+        #jobsTable td:nth-child(2):before { content: 'Position'; }
+        #jobsTable td:nth-child(3):before { content: 'Company'; }
+        #jobsTable td:nth-child(4):before { content: 'Location'; }
+        #jobsTable td:nth-child(5):before { content: 'Status'; }
+        #jobsTable td:nth-child(6):before { content: ''; }
+
+        #jobsTable td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            margin-right: 1rem;
+        }
+
+        /* Expanded details */
+        #jobsTable .job-details-row td {
+            display: block;
+            padding: 0 !important;
+        }
+
+        #jobsTable .job-details-row .p-3 {
+            margin: 0.5rem 0 0 0;
+            border-radius: 12px;
+        }
+
+        /* Larger touch targets */
+        .btn-group-sm .btn {
+            min-width: 44px;
+            min-height: 44px;
+        }
+
+        /* Filter tabs - horizontal scroll */
+        .card-body.py-2 .d-flex {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 0.5rem;
+        }
+
+        .card-body.py-2 .d-flex .btn {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Hide applied count on mobile filter */
+        .card-body.py-2 .badge {
+            display: none;
+        }
+    }
 </style>
 {% endblock %}
