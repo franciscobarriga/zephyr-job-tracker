@@ -295,53 +295,86 @@ function toggleJobDetails(jobId) {
 
     /* Mobile App-Like Styles */
     @media (max-width: 768px) {
-        /* Hide table headers on mobile */
+        /* Hide table on mobile, use cards */
+        .table-responsive {
+            overflow-x: visible;
+        }
+
+        #jobsTable {
+            display: block;
+        }
+
         #jobsTable thead {
             display: none;
         }
 
-        /* Card-style rows on mobile */
-        #jobsTable tbody tr.job-row {
-            display: block;
-            background: white;
-            border-radius: 12px;
-            margin: 0 0 0.75rem 0;
-            padding: 1rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        #jobsTable tbody {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 0.5rem;
         }
 
-        #jobsTable tbody td {
+        #jobsTable tbody tr.job-row {
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 16px;
+            padding: 1rem;
+            margin: 0;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: 1px solid #eee;
+        }
+
+        /* Company and location inline */
+        #jobsTable tbody tr.job-row td:nth-child(3) {
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        #jobsTable tbody tr.job-row td:nth-child(4) {
+            font-size: 0.85rem;
+            color: #777;
+        }
+
+        /* Actions and status row */
+        #jobsTable tbody tr.job-row td:nth-child(5),
+        #jobsTable tbody tr.job-row td:nth-child(6) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.4rem 0;
-            border: none;
-            border-bottom: 1px solid #f5f5f5;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #f0f0f0;
         }
 
-        #jobsTable tbody td:last-child {
-            border-bottom: none;
-            padding-top: 0.75rem;
-            justify-content: flex-end;
+        #jobsTable tbody tr.job-row td:nth-child(5) {
+            order: -1;
+            border-top: none;
+            margin-top: 0;
+            padding-top: 0;
         }
 
-        #jobsTable td:nth-child(1):before { content: ''; display: none; }
-        #jobsTable td:nth-child(2):before { content: 'Position'; }
-        #jobsTable td:nth-child(3):before { content: 'Company'; }
-        #jobsTable td:nth-child(4):before { content: 'Location'; }
-        #jobsTable td:nth-child(5):before { content: 'Status'; }
-        #jobsTable td:nth-child(6):before { content: ''; }
-
-        #jobsTable td::before {
-            content: attr(data-label);
-            font-weight: 600;
-            color: #6c757d;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            margin-right: 1rem;
+        /* Remove expand icon */
+        #jobsTable tbody tr.job-row td:first-child {
+            display: none;
         }
 
-        /* Expanded details */
+        /* Filter tabs scroll */
+        .card-body.py-2 {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .card-body.py-2 .d-flex {
+            flex-wrap: nowrap !important;
+        }
+
+        /* Card padding on details */
+        .job-details-row .col-md-6 {
+            margin-bottom: 1rem;
+        }
+    }
         #jobsTable .job-details-row td {
             display: block;
             padding: 0 !important;

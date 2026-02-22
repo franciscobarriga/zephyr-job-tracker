@@ -5,134 +5,63 @@
 {% block content %}
 <div class="page-header">
     <div class="page-title">
-        <h1 class="mb-0"><i class="bi bi-wind"></i> Welcome back{% if username %}, {{ username }}{% endif %}!</h1>
+        <h1 class="mb-0"><i class="bi bi-wind"></i> Dashboard</h1>
     </div>
     <a href="/search" class="btn btn-zephyr">
         <i class="bi bi-plus-lg me-2"></i>New Search
     </a>
 </div>
 
-<!-- Player Level Banner -->
-<div class="card mb-4 border-0" style="background: linear-gradient(135deg, var(--zephyr-deep) 0%, var(--zephyr-ocean) 100%);">
-    <div class="card-body py-4">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <div class="d-flex align-items-center gap-4">
-                    <div class="level-badge">
-                        <div class="level-circle">
-                            <span class="level-number">{{ user_level|default(1) }}</span>
-                        </div>
-                    </div>
-                    <div class="text-white">
-                        <h3 class="mb-1 text-white">Level {{ user_level|default(1) }}</h3>
-                        <p class="mb-0 opacity-75">
-                            {% if user_level|default(1) == 1 %}
-                                You're just getting started. Keep applying!
-                            {% elif user_level|default(1) < 5 %}
-                                Great progress! You're building momentum.
-                            {% elif user_level|default(1) < 10 %}
-                                Impressive! You're becoming a pro at this.
-                            {% else %}
-                                Master status! You're unstoppable.
-                            {% endif %}
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                <div class="streak-counter">
-                    <i class="bi bi-fire"></i>
-                    <span class="streak-number">{{ user_streak|default(0) }}</span>
-                    <span class="streak-label">day streak</span>
-                </div>
-            </div>
-        </div>
-        <!-- XP Progress Bar -->
-        <div class="mt-4">
-            <div class="d-flex justify-content-between text-white-50 small mb-2">
-                <span>Progress to Level {{ user_level|default(1) + 1 }}</span>
-                <span>{{ xp_progress|default(0) }} / 100 XP</span>
-            </div>
-            <div class="progress" style="height: 8px; background: rgba(255,255,255,0.2);">
-                <div class="progress-bar" role="progressbar" style="width: {{ xp_progress|default(0) }}%; background: var(--zephyr-gold);" aria-valuenow="{{ xp_progress|default(0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Stats Grid -->
-<div class="row mb-4 g-4">
-    <div class="col-6 col-lg-3">
-        <div class="stat-card primary animate-fade-in animate-delay-1">
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+            <i class="bi bi-briefcase"></i>
+        </div>
+        <div class="stat-content">
             <div class="stat-number">{{ stats.total }}</div>
             <div class="stat-label">Total Jobs</div>
-            <div class="stat-trend mt-2">
-                <i class="bi bi-graph-up"></i> Tracked
-            </div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card success animate-fade-in animate-delay-2">
-            <div class="stat-number">{{ stats.applied }}</div>
-            <div class="stat-label">Applied</div>
-            <div class="stat-trend mt-2">
-                <i class="bi bi-send"></i> Sent
-            </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
+            <i class="bi bi-stars"></i>
         </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card warning animate-fade-in animate-delay-3">
-            <div class="stat-number">{{ stats.thinking }}</div>
-            <div class="stat-label">Thinking</div>
-            <div class="stat-trend mt-2">
-                <i class="bi bi-hourglass-split"></i> Pending
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card info animate-fade-in animate-delay-4">
+        <div class="stat-content">
             <div class="stat-number">{{ stats.new }}</div>
             <div class="stat-label">New</div>
-            <div class="stat-trend mt-2">
-                <i class="bi bi-stars"></i> Fresh
-            </div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-number">{{ stats.thinking }}</div>
+            <div class="stat-label">Thinking</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #34d399);">
+            <i class="bi bi-check2-circle"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-number">{{ stats.applied }}</div>
+            <div class="stat-label">Applied</div>
         </div>
     </div>
 </div>
 
-<!-- Secondary Stats -->
-<div class="row mb-4 g-4">
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="mb-3">
-                    <i class="bi bi-search" style="font-size: 2rem; color: var(--zephyr-breeze);"></i>
-                </div>
-                <h3 class="mb-1">{{ stats.active_searches }}</h3>
-                <p class="text-muted mb-0">Active Searches</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="mb-3">
-                    <i class="bi bi-calendar-week" style="font-size: 2rem; color: var(--zephyr-gold);"></i>
-                </div>
-                <h3 class="mb-1">{{ stats.week }}</h3>
-                <p class="text-muted mb-0">This Week</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="mb-3">
-                    <i class="bi bi-x-circle" style="font-size: 2rem; color: var(--text-muted);"></i>
-                </div>
-                <h3 class="mb-1">{{ stats.ignored }}</h3>
-                <p class="text-muted mb-0">Ignored</p>
-            </div>
+<!-- Quick Actions -->
+<div class="card mb-4">
+    <div class="card-body py-3">
+        <div class="d-flex gap-2 overflow-auto pb-1">
+            <a href="/job-board" class="btn btn-zephyr flex-shrink-0">
+                <i class="bi bi-layout-text-sidebar-reverse me-2"></i>Job Board
+            </a>
+            <a href="/search" class="btn btn-zephyr-secondary flex-shrink-0">
+                <i class="bi bi-gear me-2"></i>Search Configs
+            </a>
         </div>
     </div>
 </div>
@@ -147,61 +76,71 @@
     </div>
     <div class="card-body p-0">
         {% if recent_jobs %}
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Position</th>
-                        <th>Company</th>
-                        <th>Location</th>
-                        <th>Status</th>
-                        <th>Applied On</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for job in recent_jobs %}
-                    <tr>
-                        <td>
-                            <strong>{{ job.title }}</strong>
-                            {% if job.source %}
-                            <br><small class="text-muted">{{ job.source }}</small>
-                            {% endif %}
-                        </td>
-                        <td>{{ job.company }}</td>
-                        <td>
-                            {% if job.location %}
-                            <i class="bi bi-geo-alt me-1"></i>{{ job.location }}
-                            {% else %}
-                            <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge badge-status badge-applied">
-                                <i class="bi bi-check-circle me-1"></i>Applied
-                            </span>
-                        </td>
-                        <td class="text-muted">
-                            {% if job.applied_at %}
-                            {{ job.applied_at[:10] }}
-                            {% elif job.created_at %}
-                            {{ job.created_at[:10] }}
-                            {% else %}
-                            N/A
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if job.url %}
-                            <a href="{{ job.url }}" target="_blank" class="btn btn-icon btn-zephyr-secondary" title="View Job">
-                                <i class="bi bi-box-arrow-up-right"></i>
-                            </a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <table class="table table-hover mb-0" id="appliedTable">
+            <thead>
+                <tr>
+                    <th style="width: 40px;"></th>
+                    <th>Position</th>
+                    <th>Company</th>
+                    <th>Status</th>
+                    <th>Applied</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in recent_jobs %}
+                <tr class="job-row" data-job-id="applied-{{ job.id }}" onclick="toggleJobDetails('applied-{{ job.id }}')" style="cursor: pointer;">
+                    <td>
+                        <i class="bi bi-chevron-right expand-icon" id="icon-applied-{{ job.id }}"></i>
+                    </td>
+                    <td>
+                        <strong>{{ job.title }}</strong>
+                        {% if job.ai_requirements %}
+                        <br><small class="text-muted">{{ job.ai_requirements[:60] }}{% if job.ai_requirements|length > 60 %}...{% endif %}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ job.company }}</td>
+                    <td>
+                        <span class="badge badge-status badge-applied">
+                            <i class="bi bi-check-circle me-1"></i>Applied
+                        </span>
+                    </td>
+                    <td class="text-muted">
+                        {% if job.applied_at %}
+                        {{ job.applied_at[:10] }}
+                        {% elif job.created_at %}
+                        {{ job.created_at[:10] }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td onclick="event.stopPropagation()">
+                        {% if job.url %}
+                        <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Job">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                <!-- Hidden details -->
+                <tr id="details-applied-{{ job.id }}" class="job-details-row" style="display: none;">
+                    <td colspan="6">
+                        <div class="p-3 bg-light rounded">
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6><i class="bi bi-robot me-2"></i>AI Summary</h6>
+                                    <p class="mb-2">{{ job.ai_summary if job.ai_summary else 'No summary available' }}</p>
+
+                                    <h6><i class="bi bi-tools me-2"></i>Requirements</h6>
+                                    <p class="mb-2">{{ job.ai_requirements if job.ai_requirements else 'No requirements extracted' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% else %}
         <div class="text-center py-5">
             <i class="bi bi-wind" style="font-size: 4rem; color: var(--zephyr-foam);"></i>
@@ -215,52 +154,104 @@
     </div>
 </div>
 
+<script>
+function toggleJobDetails(jobId) {
+    var detailsRow = document.getElementById('details-' + jobId);
+    var icon = document.getElementById('icon-' + jobId);
+
+    if (detailsRow.style.display === 'none') {
+        detailsRow.style.display = 'table-row';
+        icon.classList.remove('bi-chevron-right');
+        icon.classList.add('bi-chevron-down');
+    } else {
+        detailsRow.style.display = 'none';
+        icon.classList.remove('bi-chevron-down');
+        icon.classList.add('bi-chevron-right');
+    }
+}
+</script>
+
 <style>
     /* Dashboard-specific styles */
-    .level-badge .level-circle {
-        width: 72px;
-        height: 72px;
-        background: linear-gradient(135deg, var(--zephyr-gold) 0%, #F4C77A 100%);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 15px rgba(232, 168, 56, 0.4);
-    }
-
-    .level-badge .level-number {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--zephyr-deep);
-    }
-
-    .streak-counter {
+    .btn-icon {
+        width: 36px;
+        height: 36px;
+        padding: 0;
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        background: rgba(255, 255, 255, 0.15);
-        padding: 0.75rem 1.25rem;
-        border-radius: 50px;
+        justify-content: center;
     }
 
-    .streak-counter i {
-        font-size: 1.5rem;
-        color: var(--zephyr-gold);
+    .job-row:hover {
+        background-color: #f8f9fa;
     }
 
-    .streak-number {
-        font-size: 1.5rem;
-        font-weight: 700;
+    .job-details-row td {
+        padding: 0 !important;
     }
 
-    .streak-label {
-        font-size: 0.875rem;
-        opacity: 0.85;
+    .expand-icon {
+        transition: transform 0.2s ease;
     }
 
-    .stat-trend {
-        font-size: 0.8rem;
-        opacity: 0.75;
+    /* Mobile */
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .stat-card {
+            padding: 1rem;
+        }
+
+        /* Card-based applied jobs on mobile */
+        #appliedTable thead {
+            display: none;
+        }
+
+        #appliedTable tbody {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.75rem;
+        }
+
+        #appliedTable tbody tr.job-row {
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        #appliedTable tbody tr.job-row td {
+            padding: 0.25rem 0;
+            border: none;
+        }
+
+        #appliedTable tbody tr.job-row td:first-child {
+            display: none;
+        }
+
+        #appliedTable tbody tr.job-row td:nth-child(3),
+        #appliedTable tbody tr.job-row td:nth-child(4),
+        #appliedTable tbody tr.job-row td:nth-child(5) {
+            display: inline-block;
+            width: auto;
+            font-size: 0.8rem;
+        }
+
+        #appliedTable tbody tr.job-row td:nth-child(4) {
+            float: right;
+        }
+
+        #appliedTable tbody tr.job-row td:last-child {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #eee;
+        }
     }
 </style>
 {% endblock %}
