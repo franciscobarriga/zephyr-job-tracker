@@ -253,7 +253,7 @@ def analyze_job(description: str, retries: int = 3) -> dict:
             response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={
-                    "model": "llama3.2:latest",
+                    "model": "minimax-m2.5:cloud",
                     "prompt": f"""
 Analyze this job posting and return ONLY valid JSON:
 {{
