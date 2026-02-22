@@ -621,12 +621,7 @@ async def scrape_for_user(user_id, config):
             # Get only the newly inserted jobs with their IDs
             new_job_list = []
             for job in jobs:
-                existing = supabase.table("jobs")\
-                    .select("id, title, url")\
-                    .eq("job_hash", job["job_hash"])\
-                    .eq("user_id", user_id)\
-                    .eq("status", "New")\  # Only get jobs with "New" status (recently inserted)
-                    .execute()
+                existing = supabase.table("jobs").select("id, title, url").eq("job_hash", job["job_hash"]).eq("user_id", user_id).eq("status", "New").execute()
                 if existing.data:
                     new_job_list.append(existing.data[0])
 
