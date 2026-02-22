@@ -278,12 +278,23 @@ Job posting:
                 print(f"  ⚠️  Empty response, retrying ({attempt + 1}/{retries})...")
                 continue
 
-            raw = response.json()["response"].strip()
+            data = response.json()
+            raw = data.get("response", "").strip()
+
+            # Remove markdown code blocks if present
             if raw.startswith("```"):
                 raw = raw.split("```")[1]
                 if raw.startswith("json"):
                     raw = raw[4:]
-            parsed = json.loads(raw.strip())
+
+            raw = raw.strip()
+
+            # Try to parse JSON
+            try:
+                parsed = json.loads(raw)
+            except json.JSONDecodeError:
+                print(f"  ⚠️  Invalid JSON response, retrying ({attempt + 1}/{retries})...")
+                continue
 
             reqs = [r.replace("(inferred)", "").strip() for r in parsed.get("requirements", [])]
             reqs = [r for r in reqs if r]  # drop anything that was only "(inferred)"
@@ -605,18 +616,21 @@ async def scrape_for_user(user_id, config):
 
         print(f"  ✅ Saved {new_jobs} new jobs")
 
-        # Run AI analysis on new jobs
+        # Run AI analysis on new jobs - if we have new jobs, fetch their IDs
         if new_jobs > 0:
-            # Get the newly inserted jobs with their IDs
+            # Get only the newly inserted jobs with their IDs
             new_job_list = []
             for job in jobs:
                 existing = supabase.table("jobs")\
                     .select("id, title, url")\
                     .eq("job_hash", job["job_hash"])\
                     .eq("user_id", user_id)\
+                    .eq("status", "New")\  # Only get jobs with "New" status (recently inserted)
                     .execute()
                 if existing.data:
                     new_job_list.append(existing.data[0])
+
+            print(f"  🤖 Running AI analysis on {len(new_job_list)} new jobs...")
 
             # Run AI analysis
             if new_job_list:
