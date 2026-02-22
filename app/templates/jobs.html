@@ -46,6 +46,8 @@
                         <th>Position</th>
                         <th>Company</th>
                         <th>Location</th>
+                        <th>Type / Level</th>
+                        <th>AI Summary</th>
                         <th>Status</th>
                         <th>Source</th>
                         <th>Date</th>
@@ -57,11 +59,31 @@
                     <tr>
                         <td>
                             <strong>{{ job.title }}</strong>
+                            {% if job.ai_requirements %}
+                            <br><small class="text-muted">{{ job.ai_requirements }}</small>
+                            {% endif %}
                         </td>
                         <td>{{ job.company }}</td>
                         <td>
                             {% if job.location %}
                             <i class="bi bi-geo-alt me-1 text-muted"></i>{{ job.location }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if job.job_type or job.experience_level %}
+                            <span class="badge bg-info text-dark">{{ job.job_type or '-' }}</span>
+                            <br><small class="text-muted">{{ job.experience_level or '' }}</small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if job.ai_summary %}
+                            <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ job.ai_summary }}">
+                                {{ job.ai_summary }}
+                            </span>
                             {% else %}
                             <span class="text-muted">-</span>
                             {% endif %}
