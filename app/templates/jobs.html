@@ -40,27 +40,27 @@
     <div class="card-body p-0">
         {% if jobs %}
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0" id="jobsTable">
                 <thead>
                     <tr>
+                        <th style="width: 40px;"></th>
                         <th>Position</th>
                         <th>Company</th>
                         <th>Location</th>
-                        <th>Type / Level</th>
-                        <th>AI Summary</th>
                         <th>Status</th>
-                        <th>Source</th>
-                        <th>Date</th>
                         <th style="width: 180px;"></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for job in jobs %}
-                    <tr>
+                    <tr class="job-row" data-job-id="{{ job.id }}" onclick="toggleJobDetails('{{ job.id }}')" style="cursor: pointer;">
+                        <td>
+                            <i class="bi bi-chevron-right expand-icon" id="icon-{{ job.id }}"></i>
+                        </td>
                         <td>
                             <strong>{{ job.title }}</strong>
                             {% if job.ai_requirements %}
-                            <br><small class="text-muted">{{ job.ai_requirements }}</small>
+                            <br><small class="text-muted">{{ job.ai_requirements[:80] }}{% if job.ai_requirements|length > 80 %}...{% endif %}</small>
                             {% endif %}
                         </td>
                         <td>{{ job.company }}</td>
@@ -71,24 +71,7 @@
                             <span class="text-muted">-</span>
                             {% endif %}
                         </td>
-                        <td>
-                            {% if job.job_type or job.experience_level %}
-                            <span class="badge bg-info text-dark">{{ job.job_type or '-' }}</span>
-                            <br><small class="text-muted">{{ job.experience_level or '' }}</small>
-                            {% else %}
-                            <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if job.ai_summary %}
-                            <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ job.ai_summary }}">
-                                {{ job.ai_summary }}
-                            </span>
-                            {% else %}
-                            <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
+                        <td onclick="event.stopPropagation()">
                             {% set status = job.status or 'New' %}
                             {% if status == 'Applied' %}
                                 <span class="badge badge-status badge-applied">
@@ -108,15 +91,8 @@
                                 </span>
                             {% endif %}
                         </td>
-                        <td>
-                            <span class="text-muted">{{ job.source or 'LinkedIn' }}</span>
-                        </td>
-                        <td class="text-muted">
-                            {{ job.created_at[:10] if job.created_at else 'N/A' }}
-                        </td>
-                        <td>
+                        <td onclick="event.stopPropagation()">
                             <div class="d-flex gap-2">
-                                <!-- Status Toggle Group -->
                                 <div class="btn-group btn-group-sm" role="group" aria-label="Status actions">
                                     <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
                                         <input type="hidden" name="status" value="Applied">
@@ -145,13 +121,54 @@
                             </div>
                         </td>
                     </tr>
+                    <!-- Hidden details row -->
+                    <tr id="details-{{ job.id }}" class="job-details-row" style="display: none;">
+                        <td colspan="6">
+                            <div class="p-3 bg-light rounded">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><i class="bi bi-robot me-2"></i>AI Summary</h6>
+                                        <p class="mb-3">{{ job.ai_summary if job.ai_summary else 'No summary available' }}</p>
+
+                                        <h6><i class="bi bi-tools me-2"></i>Requirements</h6>
+                                        <p class="mb-3">{{ job.ai_requirements if job.ai_requirements else 'No requirements extracted' }}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><i class="bi bi-info-circle me-2"></i>Job Details</h6>
+                                        <table class="table table-sm table-borderless">
+                                            <tr>
+                                                <td><strong>Job Type:</strong></td>
+                                                <td>{{ job.job_type if job.job_type else '-' }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Experience:</strong></td>
+                                                <td>{{ job.experience_level if job.experience_level else '-' }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Work Type:</strong></td>
+                                                <td>{{ job.work_type if job.work_type else '-' }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Posted:</strong></td>
+                                                <td>{{ job.posted_date[:10] if job.posted_date else job.created_at[:10] if job.created_at else '-' }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Applicants:</strong></td>
+                                                <td>{{ job.applicants_count if job.applicants_count else '-' }}</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
         <div class="card-footer bg-transparent">
             <span class="text-muted">
-                Showing {{ jobs|length }} jobs
+                Showing {{ jobs|length }} jobs - Click on a row to see details
             </span>
         </div>
         {% else %}
@@ -172,8 +189,24 @@
     </div>
 </div>
 
+<script>
+function toggleJobDetails(jobId) {
+    var detailsRow = document.getElementById('details-' + jobId);
+    var icon = document.getElementById('icon-' + jobId);
+
+    if (detailsRow.style.display === 'none') {
+        detailsRow.style.display = 'table-row';
+        icon.classList.remove('bi-chevron-right');
+        icon.classList.add('bi-chevron-down');
+    } else {
+        detailsRow.style.display = 'none';
+        icon.classList.remove('bi-chevron-down');
+        icon.classList.add('bi-chevron-right');
+    }
+}
+</script>
+
 <style>
-    /* Job Board specific styles */
     .btn-success {
         background-color: #10B981;
         border-color: #10B981;
@@ -246,6 +279,18 @@
         background: var(--zephyr-breeze);
         border-color: var(--zephyr-breeze);
         color: white;
+    }
+
+    .job-row:hover {
+        background-color: #f8f9fa;
+    }
+
+    .job-details-row td {
+        padding: 0 !important;
+    }
+
+    .expand-icon {
+        transition: transform 0.2s ease;
     }
 </style>
 {% endblock %}
