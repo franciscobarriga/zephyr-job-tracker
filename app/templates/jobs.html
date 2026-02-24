@@ -45,6 +45,15 @@
                 <div class="job-location">
                     <i class="bi bi-geo-alt"></i> {{ job.location or '-' }}
                 </div>
+                {% if job.description %}
+                <div class="job-snippet">
+                    {{ job.description[:120] }}{% if job.description|length > 120 %}...{% endif %}
+                </div>
+                {% elif job.ai_requirements %}
+                <div class="job-snippet">
+                    <i class="bi bi-tools"></i> {{ job.ai_requirements[:80] }}{% if job.ai_requirements|length > 80 %}...{% endif %}
+                </div>
+                {% endif %}
             </div>
 
             <div class="job-card-status">
@@ -205,6 +214,17 @@ function toggleJobDetails(jobId) {
         color: #777;
         font-size: 0.8rem;
         margin-top: 0.25rem;
+    }
+
+    .job-snippet {
+        color: #666;
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+        line-height: 1.4;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 3px solid #3b82f6;
     }
 
     .job-card-status {
