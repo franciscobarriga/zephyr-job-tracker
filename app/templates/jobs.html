@@ -88,6 +88,13 @@
 
             <!-- Expandable Details -->
             <div class="job-card-details" id="details-{{ job.id }}">
+                {% if job.description %}
+                <div class="detail-section">
+                    <h6><i class="bi bi-file-text me-2"></i>Job Description</h6>
+                    <p class="description-text">{{ job.description[:800] }}{% if job.description|length > 800 %}...{% endif %}</p>
+                </div>
+                {% endif %}
+
                 {% if job.ai_summary %}
                 <div class="detail-section">
                     <h6><i class="bi bi-robot me-2"></i>AI Summary</h6>

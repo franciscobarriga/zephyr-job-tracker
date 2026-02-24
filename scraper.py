@@ -375,8 +375,9 @@ async def analyze_new_jobs(user_id, jobs_data):
                     print(f"    📝 Analyzing: {job['title'][:30]}...")
                     analysis = analyze_job(description)
 
-                    # Update job with AI analysis
+                    # Update job with description and AI analysis
                     supabase.table("jobs").update({
+                        "description": description,
                         "ai_summary": analysis.get("summary"),
                         "ai_requirements": analysis.get("requirements")
                     }).eq("id", job["id"]).execute()
