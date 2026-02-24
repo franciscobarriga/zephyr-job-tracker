@@ -8,406 +8,302 @@
         <h1 class="mb-0"><i class="bi bi-layout-text-sidebar-reverse"></i> Job Board</h1>
     </div>
     <a href="/dashboard" class="btn btn-zephyr-secondary">
-        <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+        <i class="bi bi-arrow-left me-2"></i>Back
     </a>
 </div>
 
 <!-- Filter Tabs -->
 <div class="card mb-4">
     <div class="card-body py-2">
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            <span class="text-muted me-2"><i class="bi bi-filter me-1"></i>Filter:</span>
+        <div class="d-flex gap-2 overflow-auto">
             <a href="/job-board" class="btn btn-sm {% if not status_filter or status_filter == 'all' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
-                All <span class="badge bg-light text-dark ms-1">{{ stats.new + stats.thinking + stats.ignored }}</span>
+                All ({{ stats.new + stats.thinking + stats.ignored }})
             </a>
             <a href="/job-board?status_filter=New" class="btn btn-sm {% if status_filter == 'New' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
-                <i class="bi bi-stars me-1"></i>New <span class="badge bg-light text-dark ms-1">{{ stats.new }}</span>
+                New ({{ stats.new }})
             </a>
             <a href="/job-board?status_filter=Thinking" class="btn btn-sm {% if status_filter == 'Thinking' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
-                <i class="bi bi-hourglass-split me-1"></i>Thinking <span class="badge bg-light text-dark ms-1">{{ stats.thinking }}</span>
+                Thinking ({{ stats.thinking }})
             </a>
             <a href="/job-board?status_filter=Ignored" class="btn btn-sm {% if status_filter == 'Ignored' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
-                <i class="bi bi-x-circle me-1"></i>Ignored <span class="badge bg-light text-dark ms-1">{{ stats.ignored }}</span>
+                Ignored ({{ stats.ignored }})
             </a>
-            <span class="ms-auto text-muted small">
-                <i class="bi bi-info-circle me-1"></i>Applied jobs shown in Dashboard
-            </span>
         </div>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-body p-0">
-        {% if jobs %}
-        <div class="table-responsive">
-            <table class="table table-hover mb-0" id="jobsTable">
-                <thead>
-                    <tr>
-                        <th style="width: 40px;"></th>
-                        <th>Position</th>
-                        <th>Company</th>
-                        <th>Location</th>
-                        <th>Status</th>
-                        <th style="width: 180px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for job in jobs %}
-                    <tr class="job-row" data-job-id="{{ job.id }}" onclick="toggleJobDetails('{{ job.id }}')" style="cursor: pointer;">
-                        <td>
-                            <i class="bi bi-chevron-right expand-icon" id="icon-{{ job.id }}"></i>
-                        </td>
-                        <td>
-                            <strong>{{ job.title }}</strong>
-                            {% if job.ai_requirements %}
-                            <br><small class="text-muted">{{ job.ai_requirements[:80] }}{% if job.ai_requirements|length > 80 %}...{% endif %}</small>
-                            {% endif %}
-                        </td>
-                        <td>{{ job.company }}</td>
-                        <td>
-                            {% if job.location %}
-                            <i class="bi bi-geo-alt me-1 text-muted"></i>{{ job.location }}
-                            {% else %}
-                            <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td onclick="event.stopPropagation()">
-                            {% set status = job.status or 'New' %}
-                            {% if status == 'Applied' %}
-                                <span class="badge badge-status badge-applied">
-                                    <i class="bi bi-check-circle me-1"></i>Applied
-                                </span>
-                            {% elif status == 'Thinking' %}
-                                <span class="badge badge-status badge-thinking">
-                                    <i class="bi bi-hourglass-split me-1"></i>Thinking
-                                </span>
-                            {% elif status == 'Ignored' %}
-                                <span class="badge badge-status badge-ignored">
-                                    <i class="bi bi-x-circle me-1"></i>Ignored
-                                </span>
-                            {% else %}
-                                <span class="badge badge-status badge-new">
-                                    <i class="bi bi-stars me-1"></i>New
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td onclick="event.stopPropagation()">
-                            <div class="d-flex gap-2">
-                                <div class="btn-group btn-group-sm" role="group" aria-label="Status actions">
-                                    <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
-                                        <input type="hidden" name="status" value="Applied">
-                                        <button type="submit" class="btn {% if status == 'Applied' %}btn-success{% else %}btn-outline-success{% endif %}" title="Mark as Applied" {% if status == 'Applied' %}disabled{% endif %}>
-                                            <i class="bi bi-check-lg"></i>
-                                        </button>
-                                    </form>
-                                    <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
-                                        <input type="hidden" name="status" value="Thinking">
-                                        <button type="submit" class="btn {% if status == 'Thinking' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %}" title="Mark as Thinking" {% if status == 'Thinking' %}disabled{% endif %}>
-                                            <i class="bi bi-hourglass"></i>
-                                        </button>
-                                    </form>
-                                    <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
-                                        <input type="hidden" name="status" value="Ignored">
-                                        <button type="submit" class="btn {% if status == 'Ignored' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" title="Mark as Ignored" {% if status == 'Ignored' %}disabled{% endif %}>
-                                            <i class="bi bi-x-lg"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                                {% if job.url %}
-                                <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Job">
-                                    <i class="bi bi-box-arrow-up-right"></i>
-                                </a>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    <!-- Hidden details row -->
-                    <tr id="details-{{ job.id }}" class="job-details-row" style="display: none;">
-                        <td colspan="6">
-                            <div class="p-3 bg-light rounded">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h6><i class="bi bi-robot me-2"></i>AI Summary</h6>
-                                        <p class="mb-3">{{ job.ai_summary if job.ai_summary else 'No summary available' }}</p>
+{% if jobs %}
+    <div class="jobs-list">
+        {% for job in jobs %}
+        <div class="job-card" onclick="toggleJobDetails('{{ job.id }}')">
+            <div class="job-card-header">
+                <div class="job-title-row">
+                    <span class="job-title">{{ job.title }}</span>
+                    <i class="bi bi-chevron-down expand-icon" id="icon-{{ job.id }}"></i>
+                </div>
+                <div class="job-company">{{ job.company }}</div>
+                <div class="job-location">
+                    <i class="bi bi-geo-alt"></i> {{ job.location or '-' }}
+                </div>
+            </div>
 
-                                        <h6><i class="bi bi-tools me-2"></i>Requirements</h6>
-                                        <p class="mb-3">{{ job.ai_requirements if job.ai_requirements else 'No requirements extracted' }}</p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6><i class="bi bi-info-circle me-2"></i>Job Details</h6>
-                                        <table class="table table-sm table-borderless">
-                                            <tr>
-                                                <td><strong>Job Type:</strong></td>
-                                                <td>{{ job.job_type if job.job_type else '-' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Experience:</strong></td>
-                                                <td>{{ job.experience_level if job.experience_level else '-' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Work Type:</strong></td>
-                                                <td>{{ job.work_type if job.work_type else '-' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Posted:</strong></td>
-                                                <td>{{ job.posted_date[:10] if job.posted_date else job.created_at[:10] if job.created_at else '-' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Applicants:</strong></td>
-                                                <td>{{ job.applicants_count if job.applicants_count else '-' }}</td>
-                                            </tr>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div class="card-footer bg-transparent">
-            <span class="text-muted">
-                Showing {{ jobs|length }} jobs - Click on a row to see details
-            </span>
-        </div>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="bi bi-briefcase" style="font-size: 4rem; color: var(--zephyr-foam);"></i>
-            <h4 class="mt-3">No jobs in board</h4>
-            <p class="text-muted">
-                {% if status_filter %}
-                No jobs with status "{{ status_filter }}". Try another filter or
+            <div class="job-card-status">
+                {% set status = job.status or 'New' %}
+                {% if status == 'Applied' %}
+                    <span class="badge bg-success">Applied</span>
+                {% elif status == 'Thinking' %}
+                    <span class="badge bg-warning text-dark">Thinking</span>
+                {% elif status == 'Ignored' %}
+                    <span class="badge bg-secondary">Ignored</span>
+                {% else %}
+                    <span class="badge bg-primary">New</span>
                 {% endif %}
-                The scraper will find new jobs for you!
-            </p>
+            </div>
+
+            <div class="job-card-actions">
+                <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
+                    <input type="hidden" name="status" value="Applied">
+                    <button type="submit" class="btn btn-sm {% if status == 'Applied' %}btn-success{% else %}btn-outline-success{% endif %}" title="Apply">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
+                </form>
+                <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
+                    <input type="hidden" name="status" value="Thinking">
+                    <button type="submit" class="btn btn-sm {% if status == 'Thinking' %}btn-warning{% else %}btn-outline-warning{% endif %}" title="Thinking">
+                        <i class="bi bi-hourglass"></i>
+                    </button>
+                </form>
+                <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
+                    <input type="hidden" name="status" value="Ignored">
+                    <button type="submit" class="btn btn-sm {% if status == 'Ignored' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" title="Ignore">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </form>
+                {% if job.url %}
+                <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Expandable Details -->
+            <div class="job-card-details" id="details-{{ job.id }}">
+                {% if job.ai_summary %}
+                <div class="detail-section">
+                    <h6><i class="bi bi-robot me-2"></i>AI Summary</h6>
+                    <p>{{ job.ai_summary }}</p>
+                </div>
+                {% endif %}
+
+                {% if job.ai_requirements %}
+                <div class="detail-section">
+                    <h6><i class="bi bi-tools me-2"></i>Requirements</h6>
+                    <p>{{ job.ai_requirements }}</p>
+                </div>
+                {% endif %}
+
+                <div class="detail-section">
+                    <h6><i class="bi bi-info-circle me-2"></i>Details</h6>
+                    <div class="detail-grid">
+                        <span>Type:</span><span>{{ job.job_type or '-' }}</span>
+                        <span>Level:</span><span>{{ job.experience_level or '-' }}</span>
+                        <span>Work:</span><span>{{ job.work_type or '-' }}</span>
+                        <span>Posted:</span><span>{{ job.posted_date[:10] if job.posted_date else job.created_at[:10] if job.created_at else '-' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="text-center text-muted py-3">
+        Showing {{ jobs|length }} jobs - tap to see details
+    </div>
+{% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-briefcase" style="font-size: 4rem; color: var(--zephyr-foam);"></i>
+            <h4 class="mt-3">No jobs found</h4>
+            <p class="text-muted">The scraper will find new jobs for you!</p>
             <a href="/search" class="btn btn-zephyr mt-2">
-                <i class="bi bi-plus-lg me-2"></i>Create Search Config
+                <i class="bi bi-plus-lg me-2"></i>Create Search
             </a>
         </div>
-        {% endif %}
     </div>
-</div>
+{% endif %}
 
 <script>
 function toggleJobDetails(jobId) {
     var detailsRow = document.getElementById('details-' + jobId);
     var icon = document.getElementById('icon-' + jobId);
 
-    if (detailsRow.style.display === 'none') {
-        detailsRow.style.display = 'table-row';
-        icon.classList.remove('bi-chevron-right');
+    if (detailsRow.classList.contains('open')) {
+        detailsRow.classList.remove('open');
+        icon.classList.remove('bi-chevron-up');
         icon.classList.add('bi-chevron-down');
     } else {
-        detailsRow.style.display = 'none';
+        detailsRow.classList.add('open');
         icon.classList.remove('bi-chevron-down');
-        icon.classList.add('bi-chevron-right');
+        icon.classList.add('bi-chevron-up');
     }
 }
 </script>
 
 <style>
-    .btn-success {
-        background-color: #10B981;
-        border-color: #10B981;
+    .jobs-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 0 0.75rem;
     }
 
-    .btn-success:hover, .btn-success:focus {
-        background-color: #059669;
-        border-color: #059669;
+    .job-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        cursor: pointer;
     }
 
-    .btn-success:disabled {
-        opacity: 1;
+    .job-card-header {
+        margin-bottom: 0.75rem;
     }
 
-    .btn-outline-success {
-        border-color: #10B981;
-        color: #10B981;
+    .job-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.5rem;
     }
 
-    .btn-outline-success:hover {
-        background-color: #10B981;
-        border-color: #10B981;
-        color: white;
-    }
-
-    .btn-warning {
-        background-color: #F59E0B;
-        border-color: #F59E0B;
-        color: white;
-    }
-
-    .btn-warning:hover, .btn-warning:focus {
-        background-color: #D97706;
-        border-color: #D97706;
-        color: white;
-    }
-
-    .btn-warning:disabled {
-        opacity: 1;
-    }
-
-    .btn-outline-warning {
-        border-color: #F59E0B;
-        color: #F59E0B;
-    }
-
-    .btn-outline-warning:hover {
-        background-color: #F59E0B;
-        border-color: #F59E0B;
-        color: white;
-    }
-
-    .btn-outline-secondary {
-        border-color: var(--border);
-        color: var(--text-secondary);
-    }
-
-    .btn-outline-secondary:hover {
-        background: var(--zephyr-foam);
-        border-color: var(--zephyr-breeze);
-        color: var(--zephyr-deep);
-    }
-
-    .btn-outline-primary {
-        border-color: var(--zephyr-breeze);
-        color: var(--zephyr-breeze);
-    }
-
-    .btn-outline-primary:hover {
-        background: var(--zephyr-breeze);
-        border-color: var(--zephyr-breeze);
-        color: white;
-    }
-
-    .job-row:hover {
-        background-color: #f8f9fa;
-    }
-
-    .job-details-row td {
-        padding: 0 !important;
+    .job-title {
+        font-weight: 600;
+        font-size: 1rem;
+        line-height: 1.3;
     }
 
     .expand-icon {
-        transition: transform 0.2s ease;
+        color: #999;
+        font-size: 0.875rem;
+        transition: transform 0.2s;
     }
 
-    /* Mobile App-Like Styles */
-    @media (max-width: 768px) {
-        /* Hide table on mobile, use cards */
-        .table-responsive {
-            overflow-x: visible;
+    .job-company {
+        color: #555;
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+
+    .job-location {
+        color: #777;
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+
+    .job-card-status {
+        margin-bottom: 0.75rem;
+    }
+
+    .job-card-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .job-card-actions .btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.875rem;
+    }
+
+    .job-card-details {
+        display: none;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #eee;
+    }
+
+    .job-card-details.open {
+        display: block;
+    }
+
+    .detail-section {
+        margin-bottom: 1rem;
+    }
+
+    .detail-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .detail-section h6 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: #666;
+        margin-bottom: 0.5rem;
+    }
+
+    .detail-section p {
+        font-size: 0.9rem;
+        color: #333;
+        margin-bottom: 0;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.25rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .detail-grid span:first-child {
+        color: #666;
+    }
+
+    /* Desktop - table style */
+    @media (min-width: 769px) {
+        .jobs-list {
+            padding: 0;
         }
 
-        #jobsTable {
-            display: block;
-        }
-
-        #jobsTable thead {
-            display: none;
-        }
-
-        #jobsTable tbody {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            padding: 0.5rem;
-        }
-
-        #jobsTable tbody tr.job-row {
-            display: flex;
-            flex-direction: column;
-            background: white;
-            border-radius: 16px;
-            padding: 1rem;
-            margin: 0;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-            border: 1px solid #eee;
-        }
-
-        /* Company and location inline */
-        #jobsTable tbody tr.job-row td:nth-child(3) {
-            font-size: 0.9rem;
-            color: #555;
-        }
-
-        #jobsTable tbody tr.job-row td:nth-child(4) {
-            font-size: 0.85rem;
-            color: #777;
-        }
-
-        /* Actions and status row */
-        #jobsTable tbody tr.job-row td:nth-child(5),
-        #jobsTable tbody tr.job-row td:nth-child(6) {
-            display: flex;
-            justify-content: space-between;
+        .job-card {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 1rem;
             align-items: center;
-            margin-top: 0.5rem;
-            padding-top: 0.5rem;
-            border-top: 1px solid #f0f0f0;
+            cursor: default;
         }
 
-        #jobsTable tbody tr.job-row td:nth-child(5) {
-            order: -1;
-            border-top: none;
-            margin-top: 0;
-            padding-top: 0;
+        .job-card-header {
+            margin-bottom: 0;
         }
 
-        /* Remove expand icon */
-        #jobsTable tbody tr.job-row td:first-child {
-            display: none;
+        .job-card-status {
+            margin-bottom: 0;
         }
 
-        /* Filter tabs scroll */
-        .card-body.py-2 {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+        .job-card-actions {
+            margin-bottom: 0;
         }
 
-        .card-body.py-2 .d-flex {
-            flex-wrap: nowrap !important;
+        .job-card-details {
+            grid-column: 1 / -1;
+            margin-top: 1rem;
         }
 
-        /* Card padding on details */
-        .job-details-row .col-md-6 {
-            margin-bottom: 1rem;
+        .job-card:hover {
+            background: #fafafa;
         }
     }
-        #jobsTable .job-details-row td {
-            display: block;
-            padding: 0 !important;
-        }
 
-        #jobsTable .job-details-row .p-3 {
-            margin: 0.5rem 0 0 0;
-            border-radius: 12px;
-        }
+    /* Buttons */
+    .btn-success { background-color: #10B981; border-color: #10B981; }
+    .btn-outline-success { border-color: #10B981; color: #10B981; }
+    .btn-outline-success:hover { background-color: #10B981; color: white; }
 
-        /* Larger touch targets */
-        .btn-group-sm .btn {
-            min-width: 44px;
-            min-height: 44px;
-        }
+    .btn-warning { background-color: #F59E0B; border-color: #F59E0B; color: white; }
+    .btn-outline-warning { border-color: #F59E0B; color: #F59E0B; }
+    .btn-outline-warning:hover { background-color: #F59E0B; color: white; }
 
-        /* Filter tabs - horizontal scroll */
-        .card-body.py-2 .d-flex {
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 0.5rem;
-        }
-
-        .card-body.py-2 .d-flex .btn {
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        /* Hide applied count on mobile filter */
-        .card-body.py-2 .badge {
-            display: none;
-        }
-    }
+    .btn-outline-primary { border-color: #3b82f6; color: #3b82f6; }
+    .btn-outline-primary:hover { background-color: #3b82f6; color: white; }
 </style>
 {% endblock %}

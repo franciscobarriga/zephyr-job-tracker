@@ -55,12 +55,12 @@
 <!-- Quick Actions -->
 <div class="card mb-4">
     <div class="card-body py-3">
-        <div class="d-flex gap-2 overflow-auto pb-1">
-            <a href="/job-board" class="btn btn-zephyr flex-shrink-0">
+        <div class="d-flex gap-2">
+            <a href="/job-board" class="btn btn-zephyr flex-grow-1 text-center">
                 <i class="bi bi-layout-text-sidebar-reverse me-2"></i>Job Board
             </a>
-            <a href="/search" class="btn btn-zephyr-secondary flex-shrink-0">
-                <i class="bi bi-gear me-2"></i>Search Configs
+            <a href="/search" class="btn btn-zephyr-secondary flex-grow-1 text-center">
+                <i class="bi bi-gear me-2"></i>Searches
             </a>
         </div>
     </div>
@@ -70,86 +70,75 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-check2-circle me-2"></i>My Applications</h5>
-        <a href="/job-board" class="btn btn-sm btn-zephyr-secondary">
-            View Job Board <i class="bi bi-arrow-right ms-1"></i>
-        </a>
     </div>
     <div class="card-body p-0">
         {% if recent_jobs %}
-        <table class="table table-hover mb-0" id="appliedTable">
-            <thead>
-                <tr>
-                    <th style="width: 40px;"></th>
-                    <th>Position</th>
-                    <th>Company</th>
-                    <th>Status</th>
-                    <th>Applied</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
+            <div class="jobs-list">
                 {% for job in recent_jobs %}
-                <tr class="job-row" data-job-id="applied-{{ job.id }}" onclick="toggleJobDetails('applied-{{ job.id }}')" style="cursor: pointer;">
-                    <td>
-                        <i class="bi bi-chevron-right expand-icon" id="icon-applied-{{ job.id }}"></i>
-                    </td>
-                    <td>
-                        <strong>{{ job.title }}</strong>
-                        {% if job.ai_requirements %}
-                        <br><small class="text-muted">{{ job.ai_requirements[:60] }}{% if job.ai_requirements|length > 60 %}...{% endif %}</small>
+                <div class="job-card" onclick="toggleJobDetails('applied-{{ job.id }}')">
+                    <div class="job-card-header">
+                        <div class="job-title-row">
+                            <span class="job-title">{{ job.title }}</span>
+                            <i class="bi bi-chevron-down expand-icon" id="icon-applied-{{ job.id }}"></i>
+                        </div>
+                        <div class="job-company">{{ job.company }}</div>
+                        <div class="job-location">
+                            <i class="bi bi-geo-alt"></i> {{ job.location or '-' }}
+                        </div>
+                    </div>
+
+                    <div class="job-card-status">
+                        <span class="badge bg-success">Applied</span>
+                    </div>
+
+                    <div class="job-card-actions" onclick="event.stopPropagation()">
+                        {% if job.url %}
+                        <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
                         {% endif %}
-                    </td>
-                    <td>{{ job.company }}</td>
-                    <td>
-                        <span class="badge badge-status badge-applied">
-                            <i class="bi bi-check-circle me-1"></i>Applied
-                        </span>
-                    </td>
-                    <td class="text-muted">
+                    </div>
+
+                    <div class="job-card-date">
                         {% if job.applied_at %}
                         {{ job.applied_at[:10] }}
                         {% elif job.created_at %}
                         {{ job.created_at[:10] }}
-                        {% else %}
-                        N/A
                         {% endif %}
-                    </td>
-                    <td onclick="event.stopPropagation()">
-                        {% if job.url %}
-                        <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Job">
-                            <i class="bi bi-box-arrow-up-right"></i>
-                        </a>
-                        {% endif %}
-                    </td>
-                </tr>
-                <!-- Hidden details -->
-                <tr id="details-applied-{{ job.id }}" class="job-details-row" style="display: none;">
-                    <td colspan="6">
-                        <div class="p-3 bg-light rounded">
-                            <div class="row">
-                                <div class="col-12">
-                                    <h6><i class="bi bi-robot me-2"></i>AI Summary</h6>
-                                    <p class="mb-2">{{ job.ai_summary if job.ai_summary else 'No summary available' }}</p>
+                    </div>
 
-                                    <h6><i class="bi bi-tools me-2"></i>Requirements</h6>
-                                    <p class="mb-2">{{ job.ai_requirements if job.ai_requirements else 'No requirements extracted' }}</p>
-                                </div>
-                            </div>
+                    <!-- Expandable Details -->
+                    <div class="job-card-details" id="details-applied-{{ job.id }}">
+                        {% if job.ai_summary %}
+                        <div class="detail-section">
+                            <h6><i class="bi bi-robot me-2"></i>AI Summary</h6>
+                            <p>{{ job.ai_summary }}</p>
                         </div>
-                    </td>
-                </tr>
+                        {% endif %}
+
+                        {% if job.ai_requirements %}
+                        <div class="detail-section">
+                            <h6><i class="bi bi-tools me-2"></i>Requirements</h6>
+                            <p>{{ job.ai_requirements }}</p>
+                        </div>
+                        {% endif %}
+
+                        {% if not job.ai_summary and not job.ai_requirements %}
+                        <p class="text-muted">No AI analysis available</p>
+                        {% endif %}
+                    </div>
+                </div>
                 {% endfor %}
-            </tbody>
-        </table>
+            </div>
         {% else %}
-        <div class="text-center py-5">
-            <i class="bi bi-wind" style="font-size: 4rem; color: var(--zephyr-foam);"></i>
-            <h4 class="mt-3">No applications yet</h4>
-            <p class="text-muted">Start by creating a search config to find your dream job!</p>
-            <a href="/search" class="btn btn-zephyr mt-2">
-                <i class="bi bi-plus-lg me-2"></i>Create Search
-            </a>
-        </div>
+            <div class="text-center py-5">
+                <i class="bi bi-wind" style="font-size: 4rem; color: var(--zephyr-foam);"></i>
+                <h4 class="mt-3">No applications yet</h4>
+                <p class="text-muted">Start by creating a search config to find your dream job!</p>
+                <a href="/search" class="btn btn-zephyr mt-2">
+                    <i class="bi bi-plus-lg me-2"></i>Create Search
+                </a>
+            </div>
         {% endif %}
     </div>
 </div>
@@ -159,98 +148,138 @@ function toggleJobDetails(jobId) {
     var detailsRow = document.getElementById('details-' + jobId);
     var icon = document.getElementById('icon-' + jobId);
 
-    if (detailsRow.style.display === 'none') {
-        detailsRow.style.display = 'table-row';
-        icon.classList.remove('bi-chevron-right');
+    if (detailsRow.classList.contains('open')) {
+        detailsRow.classList.remove('open');
+        icon.classList.remove('bi-chevron-up');
         icon.classList.add('bi-chevron-down');
     } else {
-        detailsRow.style.display = 'none';
+        detailsRow.classList.add('open');
         icon.classList.remove('bi-chevron-down');
-        icon.classList.add('bi-chevron-right');
+        icon.classList.add('bi-chevron-up');
     }
 }
 </script>
 
 <style>
-    /* Dashboard-specific styles */
-    .btn-icon {
-        width: 36px;
-        height: 36px;
-        padding: 0;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+    .jobs-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0.75rem;
     }
 
-    .job-row:hover {
-        background-color: #f8f9fa;
+    .job-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        cursor: pointer;
     }
 
-    .job-details-row td {
-        padding: 0 !important;
+    .job-card-header {
+        margin-bottom: 0.5rem;
+    }
+
+    .job-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .job-title {
+        font-weight: 600;
+        font-size: 1rem;
+        line-height: 1.3;
     }
 
     .expand-icon {
-        transition: transform 0.2s ease;
+        color: #999;
+        font-size: 0.875rem;
+        transition: transform 0.2s;
     }
 
-    /* Mobile */
-    @media (max-width: 768px) {
-        .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
+    .job-company {
+        color: #555;
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+
+    .job-location {
+        color: #777;
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+
+    .job-card-status {
+        margin-bottom: 0.5rem;
+    }
+
+    .job-card-actions {
+        margin-bottom: 0.5rem;
+    }
+
+    .job-card-actions .btn {
+        padding: 0.4rem 0.6rem;
+    }
+
+    .job-card-date {
+        font-size: 0.8rem;
+        color: #999;
+    }
+
+    .job-card-details {
+        display: none;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #eee;
+    }
+
+    .job-card-details.open {
+        display: block;
+    }
+
+    .detail-section {
+        margin-bottom: 0.75rem;
+    }
+
+    .detail-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .detail-section h6 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: #666;
+        margin-bottom: 0.5rem;
+    }
+
+    .detail-section p {
+        font-size: 0.9rem;
+        color: #333;
+        margin-bottom: 0;
+    }
+
+    /* Desktop */
+    @media (min-width: 769px) {
+        .job-card {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            gap: 1rem;
+            align-items: center;
+            cursor: default;
         }
 
-        .stat-card {
-            padding: 1rem;
+        .job-card-header {
+            margin-bottom: 0;
         }
 
-        /* Card-based applied jobs on mobile */
-        #appliedTable thead {
-            display: none;
+        .job-card-status, .job-card-actions, .job-card-date {
+            margin-bottom: 0;
         }
 
-        #appliedTable tbody {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            padding: 0.75rem;
-        }
-
-        #appliedTable tbody tr.job-row {
-            display: flex;
-            flex-direction: column;
-            background: white;
-            border-radius: 12px;
-            padding: 1rem;
-            margin: 0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        }
-
-        #appliedTable tbody tr.job-row td {
-            padding: 0.25rem 0;
-            border: none;
-        }
-
-        #appliedTable tbody tr.job-row td:first-child {
-            display: none;
-        }
-
-        #appliedTable tbody tr.job-row td:nth-child(3),
-        #appliedTable tbody tr.job-row td:nth-child(4),
-        #appliedTable tbody tr.job-row td:nth-child(5) {
-            display: inline-block;
-            width: auto;
-            font-size: 0.8rem;
-        }
-
-        #appliedTable tbody tr.job-row td:nth-child(4) {
-            float: right;
-        }
-
-        #appliedTable tbody tr.job-row td:last-child {
-            margin-top: 0.5rem;
-            padding-top: 0.5rem;
-            border-top: 1px solid #eee;
+        .job-card:hover {
+            background: #fafafa;
         }
     }
 </style>
