@@ -89,11 +89,16 @@
                     </button>
                 </form>
                 {% if job.url %}
-                <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View on LinkedIn">
                     <i class="bi bi-box-arrow-up-right"></i>
                 </a>
                 {% endif %}
+                <button type="button" class="btn btn-sm btn-outline-info" onclick="fetchDescription('{{ job.id }}')" title="Fetch Description">
+                    <i class="bi bi-arrow-repeat"></i>
+                </button>
             </div>
+
+            <div id="fetch-status-{{ job.id }}" class="fetch-status"></div>
 
             <!-- Expandable Details -->
             <div class="job-card-details" id="details-{{ job.id }}">

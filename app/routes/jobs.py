@@ -2,13 +2,22 @@
 Jobs management routes
 """
 
+import os
+import asyncio
 from fastapi import APIRouter, Request, Depends, Form, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from datetime import datetime
+from dotenv import load_dotenv
+from playwright.async_api import async_playwright
+import requests
+import json
 
 from app.auth import get_current_user, supabase
+
+# Load env
+load_dotenv()
 
 router = APIRouter()
 
@@ -83,6 +92,59 @@ async def update_job_status(
 
         supabase.table("jobs").update(update_data).eq("id", job_id).eq("user_id", user["id"]).execute()
         return RedirectResponse(url="/job-board", status_code=303)
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/{job_id}/fetch-description")
+async def fetch_job_description(
+    job_id: int,
+    user = Depends(get_current_user)
+):
+    """Fetch job description from LinkedIn"""
+    import asyncio
+    import sys
+    sys.path.insert(0, str(BASE_DIR.parent))
+    from scraper import get_job_description, analyze_job
+
+    try:
+        # Get job URL
+        response = supabase.table("jobs").select("url, title").eq("id", job_id).eq("user_id", user["id"]).execute()
+        if not response.data:
+            return {"error": "Job not found"}
+
+        job = response.data[0]
+        job_url = job.get("url")
+        if not job_url:
+            return {"error": "No URL for job"}
+
+        # Run async function to get description
+        async def fetch():
+            from playwright.async_api import async_playwright
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                page = await browser.new_page()
+                description = await get_job_description(page, job_url)
+                await browser.close()
+                return description
+
+        description = asyncio.run(fetch())
+
+        if description:
+            # Run AI analysis
+            analysis = analyze_job(description)
+
+            # Update job
+            supabase.table("jobs").update({
+                "description": description,
+                "ai_summary": analysis.get("summary"),
+                "ai_requirements": analysis.get("requirements")
+            }).eq("id", job_id).execute()
+
+            return {"success": True, "description": description[:200] + "..."}
+
+        return {"error": "Could not fetch description"}
 
     except Exception as e:
         return {"error": str(e)}
