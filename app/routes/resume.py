@@ -1,3 +1,6 @@
+import asyncio
+import logging
+
 from fastapi import APIRouter, Request, Depends, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -7,6 +10,7 @@ from app.auth import get_current_user, supabase
 from app.utils.resume_parser import parse_resume
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
@@ -80,13 +84,14 @@ async def rescore_all_jobs(
     scored = 0
     for job in jobs:
         try:
-            match = score_job_match(job["description"], resume_text)
+            match = await asyncio.to_thread(score_job_match, job["description"], resume_text)
             supabase.table("jobs").update({
                 "match_score": match["score"],
                 "match_reasoning": match["reasoning"],
             }).eq("id", job["id"]).execute()
             scored += 1
-        except Exception:
+        except Exception as exc:
+            logger.warning("rescore failed for job %s: %s", job["id"], exc)
             continue
 
     return {"scored": scored, "total": len(jobs)}

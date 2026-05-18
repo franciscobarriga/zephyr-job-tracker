@@ -60,10 +60,19 @@ async function rescoreAll() {
     const btn = document.getElementById('rescoreBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Scoring...';
-    const resp = await fetch('/resume/rescore-all', {method: 'POST'});
-    const data = await resp.json();
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Done (' + (data.scored || 0) + ' scored)';
+    try {
+        const resp = await fetch('/resume/rescore-all', {method: 'POST'});
+        const data = await resp.json();
+        btn.disabled = false;
+        if (!resp.ok) {
+            btn.innerHTML = '<i class="bi bi-x-circle me-2"></i>Error: ' + (data.error || 'Failed');
+        } else {
+            btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Done (' + (data.scored || 0) + ' scored)';
+        }
+    } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-x-circle me-2"></i>Failed — try again';
+    }
 }
 </script>
 {% endif %}
