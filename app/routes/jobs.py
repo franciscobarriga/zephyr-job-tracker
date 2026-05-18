@@ -3,7 +3,6 @@ Jobs management routes
 """
 
 import os
-import sys
 from fastapi import APIRouter, Request, Depends, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -21,8 +20,6 @@ router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from scraper import get_job_description
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -103,6 +100,12 @@ async def fetch_job_description(
     user=Depends(get_current_user),
 ):
     """Fetch job description from LinkedIn and run AI analysis + match scoring."""
+    import sys
+    from pathlib import Path as _Path
+    _root = str(_Path(__file__).resolve().parent.parent.parent)
+    if _root not in sys.path:
+        sys.path.insert(0, _root)
+    from scraper import get_job_description  # noqa: E402
     from app.utils.ai_client import analyze_job, score_job_match
     from playwright.async_api import async_playwright
 

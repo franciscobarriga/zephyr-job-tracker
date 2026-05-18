@@ -80,3 +80,48 @@ class TestResumeUpload:
                 )
         assert resp.status_code == 400
         assert "Unsupported file type" in resp.text
+
+
+class TestRescoreAll:
+    def test_returns_400_when_no_resume(self):
+        mock_user = {"id": "uid", "email": "a@b.com", "user_metadata": {}}
+        mock_profile = MagicMock()
+        mock_profile.data = {"resume_text": None}
+
+        with patch("app.routes.resume.supabase") as mock_sb:
+            mock_sb.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_profile
+            client = _make_app_with_mocked_user(mock_user)
+            resp = client.post("/resume/rescore-all")
+
+        assert resp.status_code == 400
+        assert "No resume" in resp.json()["error"]
+
+    def test_scores_unscored_jobs_and_returns_count(self):
+        mock_user = {"id": "uid", "email": "a@b.com", "user_metadata": {}}
+        mock_profile = MagicMock()
+        mock_profile.data = {"resume_text": "Experienced Python engineer"}
+        mock_jobs = MagicMock()
+        mock_jobs.data = [
+            {"id": 1, "description": "Python backend role"},
+            {"id": 2, "description": "Java developer role"},
+        ]
+        mock_update_chain = MagicMock()
+
+        with patch("app.routes.resume.supabase") as mock_sb, \
+             patch("app.routes.resume.asyncio.to_thread", return_value={"score": 75, "reasoning": "Good match"}):
+            table_mock = mock_sb.table.return_value
+            # profile select
+            table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_profile
+            # jobs select chain: .select().eq().is_().not_.is_().execute()
+            jobs_chain = table_mock.select.return_value.eq.return_value.is_.return_value.not_.is_.return_value
+            jobs_chain.execute.return_value = mock_jobs
+            # update chain
+            table_mock.update.return_value.eq.return_value.execute.return_value = mock_update_chain
+
+            client = _make_app_with_mocked_user(mock_user)
+            resp = client.post("/resume/rescore-all")
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["total"] == 2
+        assert body["scored"] == 2

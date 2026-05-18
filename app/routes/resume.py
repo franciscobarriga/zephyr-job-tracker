@@ -50,10 +50,11 @@ async def upload_resume(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    supabase.table("profiles").update({
+    supabase.table("profiles").upsert({
+        "id": user["id"],
         "resume_text": resume_text,
         "resume_filename": file.filename,
-    }).eq("id", user["id"]).execute()
+    }).execute()
 
     return RedirectResponse(url="/resume/?uploaded=1", status_code=303)
 
