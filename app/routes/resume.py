@@ -23,8 +23,7 @@ async def resume_page(request: Request, user=Depends(get_current_user)):
         .execute()
     )
     data = profile.data or {}
-    return templates.TemplateResponse("resume.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "resume.html", {
         "user": user,
         "has_resume": bool(data.get("resume_text")),
         "resume_filename": data.get("resume_filename"),
@@ -42,7 +41,10 @@ async def upload_resume(
     if len(contents) > _MAX_BYTES:
         raise HTTPException(status_code=400, detail="File too large (max 5 MB)")
 
-    resume_text = parse_resume(contents, file.filename)
+    try:
+        resume_text = parse_resume(contents, file.filename)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     supabase.table("profiles").update({
         "resume_text": resume_text,

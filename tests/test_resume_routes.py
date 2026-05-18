@@ -68,3 +68,15 @@ class TestResumeUpload:
             )
 
         assert resp.status_code == 400
+
+    def test_rejects_unparseable_file(self):
+        mock_user = {"id": "uid", "email": "a@b.com", "user_metadata": {}}
+        with patch("app.routes.resume.parse_resume", side_effect=ValueError("Unsupported file type: photo.png")):
+            with patch("app.routes.resume.supabase"):
+                client = _make_app_with_mocked_user(mock_user)
+                resp = client.post(
+                    "/resume/upload",
+                    files={"file": ("photo.png", io.BytesIO(b"fake"), "image/png")},
+                )
+        assert resp.status_code == 400
+        assert "Unsupported file type" in resp.text
