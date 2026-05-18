@@ -1,3 +1,6 @@
+-- Manual migration: run in the Supabase SQL Editor (https://app.supabase.com → SQL Editor).
+-- This file is documentation only — it is NOT run by any automated migration tool.
+
 -- Add resume storage to profiles
 ALTER TABLE profiles
   ADD COLUMN IF NOT EXISTS resume_text TEXT,
