@@ -8,13 +8,12 @@ import asyncio
 import hashlib
 import re
 import random
-import json
-import requests
 from datetime import datetime, timedelta
 from urllib.parse import quote_plus
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from playwright.async_api import async_playwright
+from app.utils.ai_client import analyze_job, score_job_match
 
 # Load environment variables
 load_dotenv()
@@ -243,73 +242,6 @@ def extract_work_type(metadata_text):
     return None
 
 
-def analyze_job(description: str, retries: int = 3) -> dict:
-    """Analyze job posting using Ollama LLM to extract summary and requirements"""
-    if not description:
-        return {"summary": "—", "requirements": ""}
-
-    for attempt in range(retries):
-        try:
-            response = requests.post(
-                "http://localhost:11434/api/generate",
-                json={
-                    "model": "minimax-m2.5:cloud",
-                    "prompt": f"""
-Analyze this job posting and return ONLY valid JSON:
-{{
-    "summary": "2-3 sentences: what the company does, the role, YOE if stated",
-    "requirements": ["tool1", "skill2", "technology3"]
-}}
-
-Rules:
-- summary: concise, mention YOE only if explicitly stated
-- requirements: only hard skills and tools, no soft skills, no labels like "(inferred)"
-- requirements: return an empty list [] if no tools or hard skills can be identified
-
-Job posting:
-{description[:3000]}
-""",
-                    "stream": False
-                },
-                timeout=120
-            )
-
-            if not response.text.strip():
-                print(f"  ⚠️  Empty response, retrying ({attempt + 1}/{retries})...")
-                continue
-
-            data = response.json()
-            raw = data.get("response", "").strip()
-
-            # Remove markdown code blocks if present
-            if raw.startswith("```"):
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
-
-            raw = raw.strip()
-
-            # Try to parse JSON
-            try:
-                parsed = json.loads(raw)
-            except json.JSONDecodeError:
-                print(f"  ⚠️  Invalid JSON response, retrying ({attempt + 1}/{retries})...")
-                continue
-
-            reqs = [r.replace("(inferred)", "").strip() for r in parsed.get("requirements", [])]
-            reqs = [r for r in reqs if r]  # drop anything that was only "(inferred)"
-            return {
-                "summary": parsed.get("summary", "—"),
-                "requirements": ", ".join(reqs) if reqs else ""
-            }
-
-        except Exception as e:
-            print(f"  ⚠️  Attempt {attempt + 1} failed: {e}")
-            continue
-
-    return {"summary": "—", "requirements": ""}
-
-
 
 
 async def get_job_description(page, job_url):
@@ -354,9 +286,13 @@ async def get_job_description(page, job_url):
 
 
 async def analyze_new_jobs(user_id, jobs_data):
-    """Visit each new job URL and run AI analysis"""
+    """Visit each new job URL, run AI analysis, and score against user resume."""
     if not jobs_data:
         return
+
+    # Fetch user's resume text for match scoring
+    profile_resp = supabase.table("profiles").select("resume_text").eq("id", user_id).single().execute()
+    resume_text = (profile_resp.data or {}).get("resume_text") or ""
 
     print(f"  🤖 Running AI analysis on {len(jobs_data)} new jobs...")
 
@@ -367,33 +303,34 @@ async def analyze_new_jobs(user_id, jobs_data):
         analyzed = 0
         for job in jobs_data:
             try:
-                # Get job description
                 description = await get_job_description(page, job["url"])
-
-                if description:
-                    # Run AI analysis
-                    print(f"    📝 Analyzing: {job['title'][:30]}...")
-                    analysis = analyze_job(description)
-
-                    # Update job with description and AI analysis
-                    supabase.table("jobs").update({
-                        "description": description,
-                        "ai_summary": analysis.get("summary"),
-                        "ai_requirements": analysis.get("requirements")
-                    }).eq("id", job["id"]).execute()
-
-                    analyzed += 1
-                    await human_delay(1, 3)  # Rate limit between AI calls
-                else:
+                if not description:
                     print(f"    ⚠️  No description found for: {job['title'][:30]}")
+                    continue
+
+                print(f"    📝 Analyzing: {job['title'][:30]}...")
+                analysis = analyze_job(description)
+
+                update_data = {
+                    "description": description,
+                    "ai_summary": analysis.get("summary"),
+                    "ai_requirements": analysis.get("requirements"),
+                }
+
+                if resume_text:
+                    match = score_job_match(description, resume_text)
+                    update_data["match_score"] = match["score"]
+                    update_data["match_reasoning"] = match["reasoning"]
+
+                supabase.table("jobs").update(update_data).eq("id", job["id"]).execute()
+                analyzed += 1
+                await human_delay(1, 3)
 
             except Exception as e:
                 print(f"    ⚠️  Error analyzing job: {e}")
                 continue
 
         await browser.close()
-
-    print(f"  ✅ AI analysis complete: {analyzed} jobs analyzed")
 
     print(f"  ✅ AI analysis complete: {analyzed} jobs analyzed")
 
