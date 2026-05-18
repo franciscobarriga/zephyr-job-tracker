@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Depends, UploadFile, File, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
@@ -52,3 +52,41 @@ async def upload_resume(
     }).eq("id", user["id"]).execute()
 
     return RedirectResponse(url="/resume/?uploaded=1", status_code=303)
+
+
+@router.post("/rescore-all")
+async def rescore_all_jobs(
+    request: Request,
+    user=Depends(get_current_user),
+):
+    """Re-score all jobs that don't have a match_score yet."""
+    from app.utils.ai_client import score_job_match
+
+    profile = supabase.table("profiles").select("resume_text").eq("id", user["id"]).single().execute()
+    resume_text = (profile.data or {}).get("resume_text") or ""
+    if not resume_text:
+        return JSONResponse({"error": "No resume uploaded"}, status_code=400)
+
+    jobs_resp = (
+        supabase.table("jobs")
+        .select("id, description")
+        .eq("user_id", user["id"])
+        .is_("match_score", "null")
+        .not_.is_("description", "null")
+        .execute()
+    )
+    jobs = jobs_resp.data or []
+
+    scored = 0
+    for job in jobs:
+        try:
+            match = score_job_match(job["description"], resume_text)
+            supabase.table("jobs").update({
+                "match_score": match["score"],
+                "match_reasoning": match["reasoning"],
+            }).eq("id", job["id"]).execute()
+            scored += 1
+        except Exception:
+            continue
+
+    return {"scored": scored, "total": len(jobs)}
