@@ -72,11 +72,11 @@
             {% if job.match_score is not none %}
             <div class="job-card-match ms-2">
                 {% if job.match_score >= 80 %}
-                    <span class="badge" style="background:#10b981;">
+                    <span class="badge" style="background:#10b981;" aria-label="Strong match: {{ job.match_score }}%">
                 {% elif job.match_score >= 60 %}
-                    <span class="badge" style="background:#f59e0b;">
+                    <span class="badge" style="background:#f59e0b;" aria-label="Partial match: {{ job.match_score }}%">
                 {% else %}
-                    <span class="badge bg-secondary">
+                    <span class="badge bg-secondary" aria-label="Low match: {{ job.match_score }}%">
                 {% endif %}
                         <i class="bi bi-stars me-1"></i>{{ job.match_score }}%
                     </span>
@@ -133,7 +133,7 @@
                 {% if job.match_score is not none %}
                 <div class="detail-section">
                     <div class="mt-2">
-                        <strong><i class="bi bi-stars me-1"></i>Match Score:</strong>
+                        <h6><i class="bi bi-stars me-1"></i>Match Score</h6>
                         <span class="{% if job.match_score >= 80 %}text-success{% elif job.match_score >= 60 %}text-warning{% else %}text-muted{% endif %}">
                             {{ job.match_score }}%
                         </span>
@@ -326,7 +326,7 @@ function toggleJobDetails(jobId) {
 
         .job-card {
             display: grid;
-            grid-template-columns: 1fr auto auto;
+            grid-template-columns: 1fr auto auto auto;
             gap: 1rem;
             align-items: center;
             cursor: default;
