@@ -3,6 +3,7 @@ Jobs management routes
 """
 
 import os
+import sys
 from fastapi import APIRouter, Request, Depends, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -19,6 +20,9 @@ router = APIRouter()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from scraper import get_job_description
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -102,7 +106,7 @@ async def fetch_job_description(
     from app.utils.ai_client import analyze_job, score_job_match
     from playwright.async_api import async_playwright
 
-    response = supabase.table("jobs").select("url, title").eq("id", job_id).eq("user_id", user["id"]).execute()
+    response = supabase.table("jobs").select("url").eq("id", job_id).eq("user_id", user["id"]).execute()
     if not response.data:
         return JSONResponse({"error": "Job not found"}, status_code=404)
 
@@ -110,15 +114,13 @@ async def fetch_job_description(
     if not job_url:
         return JSONResponse({"error": "No URL for this job"}, status_code=400)
 
-    import sys
-    sys.path.insert(0, str(BASE_DIR.parent))
-    from scraper import get_job_description
-
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        description = await get_job_description(page, job_url)
-        await browser.close()
+        try:
+            page = await browser.new_page()
+            description = await get_job_description(page, job_url)
+        finally:
+            await browser.close()
 
     if not description:
         return JSONResponse({"error": "Could not fetch description"}, status_code=422)
