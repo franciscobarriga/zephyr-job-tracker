@@ -58,3 +58,9 @@ class TestParseResume:
             result = parse_resume(b"%PDF-fake", "resume.pdf")
 
         assert result == "Page 1 content"
+
+    def test_raises_for_corrupted_pdf(self):
+        from app.utils.resume_parser import parse_resume
+        with patch("app.utils.resume_parser.pdfplumber.open", side_effect=Exception("corrupted")):
+            with pytest.raises(ValueError, match="Could not read PDF"):
+                parse_resume(b"not-a-pdf", "resume.pdf")
