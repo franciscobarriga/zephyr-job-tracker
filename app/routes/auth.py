@@ -84,22 +84,9 @@ async def signup(
             }
         })
         
-        # Create profile entry using admin client to bypass RLS during signup
-        if response.user:
-            if supabase_admin:
-                # Use admin client to bypass RLS for initial profile creation
-                supabase_admin.table("profiles").insert({
-                    "id": response.user.id,
-                    "username": username,
-                    "full_name": full_name
-                }).execute()
-            else:
-                # Fallback to regular client (will fail if RLS not configured)
-                supabase.table("profiles").insert({
-                    "id": response.user.id,
-                    "username": username,
-                    "full_name": full_name
-                }).execute()
+        # Profile row is auto-created by the on_auth_user_created DB trigger
+        # (see migration: auto_create_profile_on_signup). Trigger reads
+        # username + full_name from raw_user_meta_data we passed above.
         
         return templates.TemplateResponse(
             "login.html",
