@@ -53,3 +53,4 @@ scraper.log
 .DS_Store
 Thumbs.db
 .env.save
+.claude/
