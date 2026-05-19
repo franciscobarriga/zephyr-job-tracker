@@ -18,7 +18,10 @@
                 <input class="input" type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" autofocus>
             </div>
             <div class="field">
-                <label class="label" for="password">Password</label>
+                <div class="flex justify-between items-center">
+                    <label class="label" for="password" style="margin:0;">Password</label>
+                    <a href="/auth/forgot-password" class="text-sm" style="color:var(--accent);font-weight:500;">Forgot?</a>
+                </div>
                 <input class="input" type="password" id="password" name="password" placeholder="Your password" required autocomplete="current-password">
             </div>
             <button type="submit" class="btn btn-primary" style="width:100%;">Sign in <i class="bi bi-arrow-right"></i></button>
