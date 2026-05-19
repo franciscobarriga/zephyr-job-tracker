@@ -23,15 +23,13 @@ async def list_searches(request: Request, user = Depends(get_current_user)):
         response = supabase.table("search_configs").select("*").eq("user_id", user["id"]).execute()
         configs = response.data or []
         
-        return templates.TemplateResponse("search_configs.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "search_configs.html", {
             "user": user,
             "configs": configs
         })
-        
+
     except Exception as e:
-        return templates.TemplateResponse("search_configs.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "search_configs.html", {
             "user": user,
             "error": f"Error loading configs: {str(e)}"
         })

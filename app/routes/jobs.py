@@ -56,8 +56,7 @@ async def list_jobs(
         sort_key = _SORT_KEYS.get(sort, _SORT_KEYS["date"])
         jobs = sorted(jobs, key=sort_key)
 
-        return templates.TemplateResponse("jobs.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "jobs.html", {
             "user": user,
             "jobs": jobs,
             "status_filter": status_filter,
@@ -72,8 +71,7 @@ async def list_jobs(
         })
 
     except Exception as e:
-        return templates.TemplateResponse("jobs.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "jobs.html", {
             "user": user,
             "error": f"Error loading jobs: {str(e)}",
         })

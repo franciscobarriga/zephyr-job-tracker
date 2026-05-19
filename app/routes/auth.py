@@ -18,7 +18,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     """Display login page"""
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html")
 
 
 @router.post("/login")
@@ -46,16 +46,17 @@ async def login(
         
     except Exception as e:
         return templates.TemplateResponse(
+            request,
             "login.html",
-            {"request": request, "error": f"Login failed: {str(e)}"},
-            status_code=400
+            {"error": f"Login failed: {str(e)}"},
+            status_code=400,
         )
 
 
 @router.get("/signup", response_class=HTMLResponse)
 async def signup_page(request: Request):
     """Display signup page"""
-    return templates.TemplateResponse("signup.html", {"request": request})
+    return templates.TemplateResponse(request, "signup.html")
 
 
 @router.post("/signup")
@@ -89,18 +90,17 @@ async def signup(
         # username + full_name from raw_user_meta_data we passed above.
         
         return templates.TemplateResponse(
+            request,
             "login.html",
-            {
-                "request": request,
-                "success": "Account created! Please check your email to verify, then login."
-            }
+            {"success": "Account created! Please check your email to verify, then login."},
         )
-        
+
     except Exception as e:
         return templates.TemplateResponse(
+            request,
             "signup.html",
-            {"request": request, "error": f"Signup failed: {str(e)}"},
-            status_code=400
+            {"error": f"Signup failed: {str(e)}"},
+            status_code=400,
         )
 
 

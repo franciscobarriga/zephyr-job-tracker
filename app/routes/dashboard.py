@@ -107,8 +107,7 @@ async def dashboard(request: Request, user = Depends(get_current_user)):
         except Exception:
             cleanup_count_30d = 0
 
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "dashboard.html", {
             "user": user,
             "username": username,
             "stats": {
@@ -128,8 +127,7 @@ async def dashboard(request: Request, user = Depends(get_current_user)):
         })
 
     except Exception as e:
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "dashboard.html", {
             "user": user,
             "error": f"Error loading dashboard: {str(e)}"
         })
