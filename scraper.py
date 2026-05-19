@@ -244,41 +244,46 @@ def extract_work_type(metadata_text):
 
 
 
+import re as _re
+from typing import Optional as _Optional
+
+
+def _extract_linkedin_job_id(url: str) -> _Optional[str]:
+    """Pull the trailing numeric job ID out of a LinkedIn job URL."""
+    m = _re.search(r"(\d{8,})", url or "")
+    return m.group(1) if m else None
+
+
 async def get_job_description(page, job_url):
-    """Visit job detail page and extract description"""
+    """
+    Visit LinkedIn's public guest job-posting endpoint and extract the description.
+
+    Why guest endpoint: the authenticated jobs/view URL gates content behind a
+    login wall and serves localized chrome (e.g. "Pekerjaan") to headless browsers.
+    The /jobs-guest/jobs/api/jobPosting/{id} endpoint exists for SEO/sharing and
+    returns the description without auth, using .show-more-less-html__markup.
+    """
     try:
-        await page.goto(job_url, wait_until="domcontentloaded", timeout=15000)
-        await asyncio.sleep(2)  # Wait for content to load
+        job_id = _extract_linkedin_job_id(job_url)
+        target_url = (
+            f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
+            if job_id else job_url
+        )
 
-        # Try multiple selectors for job description
-        description = None
+        await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
+        await asyncio.sleep(1)
 
-        selectors = [
-            ".jobs-description__content",
-            ".job-view-layout .jobs-box",
-            ".jobs-description__body",
-            "[data-test-id='job-details']",
-            ".jobs-details__main-content",
-        ]
+        elem = await page.query_selector(
+            ".show-more-less-html__markup, .description__text, section.description"
+        )
+        description = await elem.inner_text() if elem else None
 
-        for selector in selectors:
-            elem = await page.query_selector(selector)
-            if elem:
-                description = await elem.inner_text()
-                if description and len(description) > 50:
-                    break
+        if not description or len(description) < 80:
+            # Last-ditch fallback for non-LinkedIn or unexpected layouts
+            elem = await page.query_selector("main, article")
+            description = await elem.inner_text() if elem else None
 
-        if not description:
-            # Fallback: get all paragraph text
-            paragraphs = await page.query_selector_all("p, li")
-            description_parts = []
-            for p in paragraphs[:10]:  # Limit to first 10
-                text = await p.inner_text()
-                if text and len(text) > 20:
-                    description_parts.append(text)
-            description = " ".join(description_parts)
-
-        return description[:10000] if description else None  # Limit length
+        return description[:10000] if description else None
 
     except Exception as e:
         print(f"    ⚠️  Error getting job description: {e}")
@@ -298,7 +303,14 @@ async def analyze_new_jobs(user_id, jobs_data):
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
+        context = await browser.new_context(
+            extra_http_headers={"Accept-Language": "en-US,en;q=0.9"},
+            user_agent=(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+            ),
+        )
+        page = await context.new_page()
 
         analyzed = 0
         for job in jobs_data:

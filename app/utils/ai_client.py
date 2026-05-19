@@ -1,8 +1,28 @@
 import json
+import os
 import re
 import anthropic
+from dotenv import load_dotenv
 
-_client = anthropic.Anthropic()
+# .env wins over the shell. Some environments (e.g. the Claude desktop app)
+# export ANTHROPIC_API_KEY="" which would otherwise mask the real key.
+load_dotenv(override=True)
+
+_client = None
+
+
+def _get_client() -> anthropic.Anthropic:
+    """Lazy-init so .env loading happens before the SDK reads the env var."""
+    global _client
+    if _client is None:
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "ANTHROPIC_API_KEY is missing or empty. "
+                "Set it in .env (or unset the empty shell override)."
+            )
+        _client = anthropic.Anthropic(api_key=api_key)
+    return _client
 
 _SYSTEM = "You are an expert technical recruiter. Analyze job postings and extract structured information. Return only valid JSON."
 
@@ -25,7 +45,7 @@ def analyze_job(description: str) -> dict:
         return {"summary": "—", "requirements": ""}
 
     try:
-        response = _client.messages.create(
+        response = _get_client().messages.create(
             model="claude-sonnet-4-6",
             max_tokens=512,
             system=_SYSTEM_BLOCK,
@@ -43,7 +63,8 @@ def analyze_job(description: str) -> dict:
             }]
         )
         parsed = _parse_json(response.content[0].text)
-    except Exception:
+    except Exception as exc:
+        print(f"[ai_client.analyze_job] {type(exc).__name__}: {exc}")
         return {"summary": "—", "requirements": ""}
 
     reqs = [r for r in parsed.get("requirements", []) if r]
@@ -58,7 +79,7 @@ def score_job_match(job_description: str, resume_text: str) -> dict:
         return {"score": 0, "reasoning": "Insufficient data"}
 
     try:
-        response = _client.messages.create(
+        response = _get_client().messages.create(
             model="claude-sonnet-4-6",
             max_tokens=256,
             system=_SYSTEM_BLOCK,
@@ -73,7 +94,8 @@ def score_job_match(job_description: str, resume_text: str) -> dict:
             }]
         )
         parsed = _parse_json(response.content[0].text)
-    except Exception:
+    except Exception as exc:
+        print(f"[ai_client.score_job_match] {type(exc).__name__}: {exc}")
         return {"score": 0, "reasoning": "Analysis unavailable"}
 
     return {
