@@ -253,9 +253,23 @@ function applySort(value) {
             var all = rows();
             if (idx >= 0 && all[idx]) { e.preventDefault(); all[idx].click(); }
         }
-        else if (e.key === 'a') { e.preventDefault(); clickAction('form[action$="/update-status"] input[value="Applied"] + button, button[title*="applied" i]'); }
+        else if (e.key === 'a') {
+            e.preventDefault();
+            var all = rows();
+            if (idx < 0 || !all[idx]) return;
+            var form = all[idx].querySelector('form input[value="Applied"]');
+            if (!form) return;
+            if (confirm('Mark this job as Applied?')) form.closest('form').submit();
+        }
         else if (e.key === 't') { e.preventDefault(); clickAction('button[title="Thinking"]'); }
-        else if (e.key === 'x') { e.preventDefault(); clickAction('button[title^="Ignore"]'); }
+        else if (e.key === 'x') {
+            e.preventDefault();
+            var all = rows();
+            if (idx < 0 || !all[idx]) return;
+            var form = all[idx].querySelector('form input[value="Ignored"]');
+            if (!form) return;
+            if (confirm('Ignore this job? It will be deleted.')) form.closest('form').submit();
+        }
         else if (e.key === '?') { e.preventDefault(); document.getElementById('shortcuts-modal').classList.add('open'); }
         else if (e.key === 'Escape') { document.getElementById('shortcuts-modal').classList.remove('open'); }
     });

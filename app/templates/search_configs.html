@@ -21,10 +21,20 @@
                 <div class="field">
                     <label class="label" for="keywords">Keywords</label>
                     <input class="input" type="text" id="keywords" name="keywords" placeholder="Data analyst, growth marketing…" required>
+                    <div class="suggestion-row">
+                        {% for s in ['Data Analyst', 'Product Manager', 'Software Engineer', 'Growth Marketing', 'Financial Analyst', 'UX Designer'] %}
+                        <button type="button" class="suggestion-chip" onclick="document.getElementById('keywords').value=this.textContent">{{ s }}</button>
+                        {% endfor %}
+                    </div>
                 </div>
                 <div class="field">
                     <label class="label" for="location">Location</label>
                     <input class="input" type="text" id="location" name="location" placeholder="New York, NY" required>
+                    <div class="suggestion-row">
+                        {% for s in ['Remote', 'New York, NY', 'San Francisco, CA', 'Austin, TX', 'London', 'Madrid'] %}
+                        <button type="button" class="suggestion-chip" onclick="document.getElementById('location').value=this.textContent">{{ s }}</button>
+                        {% endfor %}
+                    </div>
                 </div>
                 <div class="field">
                     <label class="label" for="pages">Pages</label>
@@ -106,4 +116,19 @@
     </div>
     {% endif %}
 </div>
+
+<style>
+.suggestion-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.suggestion-chip {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
+}
+.suggestion-chip:hover { background: var(--accent-soft); color: var(--accent-hover); border-color: var(--accent-border); }
+</style>
 {% endblock %}

@@ -107,6 +107,19 @@ async def dashboard(request: Request, user = Depends(get_current_user)):
         except Exception:
             cleanup_count_30d = 0
 
+        # Onboarding state: is the user fully set up?
+        try:
+            profile_resp = supabase.table("profiles").select("resume_text").eq("id", user["id"]).single().execute()
+            has_resume = bool((profile_resp.data or {}).get("resume_text"))
+        except Exception:
+            has_resume = False
+        has_search = active_searches > 0
+        has_jobs = total_jobs > 0
+        is_onboarding = not (has_resume and has_search and has_jobs)
+
+        # "AI features paused" hint: if any non-applied job lacks match_score, scoring is offline.
+        ai_paused = bool(jobs) and all(j.get("match_score") is None for j in jobs if j.get("status") != "Applied")
+
         return templates.TemplateResponse(request, "dashboard.html", {
             "user": user,
             "username": username,
@@ -124,6 +137,13 @@ async def dashboard(request: Request, user = Depends(get_current_user)):
             "xp_progress": xp_progress,
             "user_streak": user_streak,
             "cleanup_count_30d": cleanup_count_30d,
+            "onboarding": {
+                "active": is_onboarding,
+                "has_resume": has_resume,
+                "has_search": has_search,
+                "has_jobs": has_jobs,
+            },
+            "ai_paused": ai_paused,
         })
 
     except Exception as e:

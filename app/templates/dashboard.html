@@ -9,10 +9,92 @@
         <p class="page-subtitle">Welcome back, {{ username }}.</p>
     </div>
     <div class="flex gap-2">
+        {% if onboarding.has_search %}
+        <button class="btn btn-secondary" id="scrape-now-btn" onclick="runScraperNow()">
+            <i class="bi bi-arrow-clockwise"></i> Run scraper
+        </button>
+        {% endif %}
         <a href="/job-board" class="btn btn-secondary"><i class="bi bi-list-ul"></i> Open jobs</a>
         <a href="/search" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New search</a>
     </div>
 </div>
+
+{% if onboarding.active %}
+<div class="card mb-6">
+    <div class="card-head">
+        <div class="card-head-title"><i class="bi bi-rocket-takeoff"></i> Get started</div>
+        <span class="section-eyebrow">{{ (onboarding.has_resume|int + onboarding.has_search|int + onboarding.has_jobs|int) }} / 3</span>
+    </div>
+    <div class="card-body">
+        <div class="onboarding-steps">
+            <div class="onboarding-step {% if onboarding.has_resume %}done{% endif %}">
+                <div class="onboarding-num">{% if onboarding.has_resume %}<i class="bi bi-check2"></i>{% else %}1{% endif %}</div>
+                <div class="onboarding-text">
+                    <div class="onboarding-title">Upload your resume</div>
+                    <div class="onboarding-sub">We use it to score how well each job matches you.</div>
+                </div>
+                {% if not onboarding.has_resume %}
+                <a href="/resume/" class="btn btn-secondary btn-sm">Upload</a>
+                {% endif %}
+            </div>
+            <div class="onboarding-step {% if onboarding.has_search %}done{% endif %}">
+                <div class="onboarding-num">{% if onboarding.has_search %}<i class="bi bi-check2"></i>{% else %}2{% endif %}</div>
+                <div class="onboarding-text">
+                    <div class="onboarding-title">Create a search</div>
+                    <div class="onboarding-sub">Tell us the role + location and we'll keep scraping it.</div>
+                </div>
+                {% if not onboarding.has_search %}
+                <a href="/search" class="btn btn-secondary btn-sm">Create</a>
+                {% endif %}
+            </div>
+            <div class="onboarding-step {% if onboarding.has_jobs %}done{% endif %}">
+                <div class="onboarding-num">{% if onboarding.has_jobs %}<i class="bi bi-check2"></i>{% else %}3{% endif %}</div>
+                <div class="onboarding-text">
+                    <div class="onboarding-title">Run the scraper</div>
+                    <div class="onboarding-sub">Otherwise it'll run automatically twice a day.</div>
+                </div>
+                {% if onboarding.has_search and not onboarding.has_jobs %}
+                <button class="btn btn-secondary btn-sm" onclick="runScraperNow()">Run now</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+.onboarding-steps { display: flex; flex-direction: column; gap: 12px; }
+.onboarding-step {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px; border: 1px solid var(--border);
+    border-radius: var(--radius); background: var(--bg);
+}
+.onboarding-step.done { opacity: 0.55; }
+.onboarding-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 12px; color: var(--text-2); flex-shrink: 0;
+}
+.onboarding-step.done .onboarding-num {
+    background: var(--success-soft); border-color: var(--success-border); color: var(--success);
+}
+.onboarding-text { flex: 1; min-width: 0; }
+.onboarding-title { font-size: 13.5px; font-weight: 500; }
+.onboarding-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+</style>
+{% endif %}
+
+{% if ai_paused %}
+<div class="banner banner-warn">
+    <i class="bi bi-exclamation-triangle"></i>
+    <span><strong>AI features paused.</strong> Match scoring and summaries aren't running — likely out of Anthropic credits. <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">Top up</a> to re-enable.</span>
+</div>
+{% endif %}
+
+<div id="scrape-banner" class="banner banner-info" style="display:none;">
+    <i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite;"></i>
+    <span><strong>Scraping in progress.</strong> Usually takes 5-15 minutes. Refresh the page to see new jobs.</span>
+</div>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 
 <div class="stat-grid">
     <div class="stat">
@@ -121,5 +203,56 @@ function toggleJobDetails(jobId, row) {
     var parent = row || detail.closest('.job-row');
     if (parent) parent.classList.toggle('expanded');
 }
+
+async function runScraperNow() {
+    var btn = document.getElementById('scrape-now-btn');
+    var banner = document.getElementById('scrape-banner');
+    try {
+        var resp = await fetch('/job-board/scrape-now', {method: 'POST'});
+        var data = await resp.json();
+        if (!resp.ok) {
+            alert(data.reason || 'Could not start scraper.');
+            return;
+        }
+        if (banner) banner.style.display = 'flex';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite;"></i> Running…'; }
+        startPolling();
+    } catch (e) {
+        alert('Network error — try again.');
+    }
+}
+
+function startPolling() {
+    var banner = document.getElementById('scrape-banner');
+    var btn = document.getElementById('scrape-now-btn');
+    var interval = setInterval(async function() {
+        try {
+            var resp = await fetch('/job-board/scrape-status');
+            var data = await resp.json();
+            if (!data.running) {
+                clearInterval(interval);
+                if (banner) banner.style.display = 'none';
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Run scraper'; }
+                // Soft reload to show new jobs/stats
+                window.location.reload();
+            }
+        } catch (e) { /* keep polling */ }
+    }, 15000);
+}
+
+// On load: if scraper is mid-run, surface the banner and start polling
+(async function() {
+    try {
+        var resp = await fetch('/job-board/scrape-status');
+        var data = await resp.json();
+        if (data.running) {
+            var banner = document.getElementById('scrape-banner');
+            var btn = document.getElementById('scrape-now-btn');
+            if (banner) banner.style.display = 'flex';
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite;"></i> Running…'; }
+            startPolling();
+        }
+    } catch (e) {}
+})();
 </script>
 {% endblock %}
