@@ -1,369 +1,182 @@
 {% extends "base.html" %}
 
-{% block title %}Job Board - Zephyr{% endblock %}
+{% block title %}Jobs — Zephyr{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <div class="page-title">
-        <h1 class="mb-0"><i class="bi bi-layout-text-sidebar-reverse"></i> Job Board</h1>
+    <div>
+        <h1 class="page-title">Jobs</h1>
+        <p class="page-subtitle">{{ jobs|length }} role{{ '' if jobs|length == 1 else 's' }} to review.</p>
     </div>
-    <a href="/dashboard" class="btn btn-zephyr-secondary">
-        <i class="bi bi-arrow-left me-2"></i>Back
+    <a href="/dashboard" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
+</div>
+
+<div class="filter-tabs">
+    <a href="/job-board" class="filter-tab {% if not status_filter or status_filter == 'all' %}active{% endif %}">
+        All <span class="filter-tab-count">{{ stats.new + stats.thinking + stats.ignored }}</span>
+    </a>
+    <a href="/job-board?status_filter=New" class="filter-tab {% if status_filter == 'New' %}active{% endif %}">
+        New <span class="filter-tab-count">{{ stats.new }}</span>
+    </a>
+    <a href="/job-board?status_filter=Thinking" class="filter-tab {% if status_filter == 'Thinking' %}active{% endif %}">
+        Thinking <span class="filter-tab-count">{{ stats.thinking }}</span>
+    </a>
+    <a href="/job-board?status_filter=Ignored" class="filter-tab {% if status_filter == 'Ignored' %}active{% endif %}">
+        Ignored <span class="filter-tab-count">{{ stats.ignored }}</span>
     </a>
 </div>
 
-<!-- Filter Tabs -->
-<div class="card mb-4">
-    <div class="card-body py-2">
-        <div class="d-flex gap-2 overflow-auto">
-            <a href="/job-board" class="btn btn-sm {% if not status_filter or status_filter == 'all' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
-                All ({{ stats.new + stats.thinking + stats.ignored }})
-            </a>
-            <a href="/job-board?status_filter=New" class="btn btn-sm {% if status_filter == 'New' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
-                New ({{ stats.new }})
-            </a>
-            <a href="/job-board?status_filter=Thinking" class="btn btn-sm {% if status_filter == 'Thinking' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
-                Thinking ({{ stats.thinking }})
-            </a>
-            <a href="/job-board?status_filter=Ignored" class="btn btn-sm {% if status_filter == 'Ignored' %}btn-zephyr{% else %}btn-zephyr-secondary{% endif %}">
-                Ignored ({{ stats.ignored }})
-            </a>
-        </div>
-    </div>
-</div>
-
 {% if jobs %}
-    <div class="jobs-list">
-        {% for job in jobs %}
-        <div class="job-card" onclick="toggleJobDetails('{{ job.id }}')">
-            <div class="job-card-header">
-                <div class="job-title-row">
-                    <span class="job-title">{{ job.title }}</span>
-                    <i class="bi bi-chevron-down expand-icon" id="icon-{{ job.id }}"></i>
-                </div>
-                <div class="job-company">{{ job.company }}</div>
-                <div class="job-location">
-                    <i class="bi bi-geo-alt"></i> {{ job.location or '-' }}
-                </div>
-                {% if job.description %}
-                <div class="job-snippet">
-                    {{ job.description[:120] }}{% if job.description|length > 120 %}...{% endif %}
-                </div>
-                {% elif job.ai_requirements %}
-                <div class="job-snippet">
-                    <i class="bi bi-tools"></i> {{ job.ai_requirements[:80] }}{% if job.ai_requirements|length > 80 %}...{% endif %}
-                </div>
-                {% endif %}
+<div class="jobs-list">
+    {% for job in jobs %}
+    {% set status = job.status or 'New' %}
+    <div class="job-row" onclick="toggleJobDetails('{{ job.id }}', this)">
+        <div class="job-main">
+            <div class="job-title-line">
+                <span class="job-title">{{ job.title }}</span>
             </div>
-
-            <div class="job-card-status">
-                {% set status = job.status or 'New' %}
-                {% if status == 'Applied' %}
-                    <span class="badge bg-success">Applied</span>
-                {% elif status == 'Thinking' %}
-                    <span class="badge bg-warning text-dark">Thinking</span>
-                {% elif status == 'Ignored' %}
-                    <span class="badge bg-secondary">Ignored</span>
-                {% else %}
-                    <span class="badge bg-primary">New</span>
-                {% endif %}
+            <div class="job-meta">
+                <span class="job-meta-co">{{ job.company }}</span>
+                {% if job.location %}<span class="job-meta-sep">·</span><span>{{ job.location }}</span>{% endif %}
+                {% if job.work_type %}<span class="job-meta-sep">·</span><span>{{ job.work_type }}</span>{% endif %}
+                {% if job.posted_date %}<span class="job-meta-sep">·</span><span class="mono">{{ job.posted_date[:10] }}</span>{% endif %}
             </div>
+            {% if job.description %}
+            <div class="job-snippet">{{ job.description[:160] }}{% if job.description|length > 160 %}…{% endif %}</div>
+            {% elif job.ai_requirements %}
+            <div class="job-snippet"><i class="bi bi-tools"></i> {{ job.ai_requirements[:120] }}</div>
+            {% endif %}
+        </div>
 
+        <div class="job-pills">
             {% if job.match_score is not none %}
-            <div class="job-card-match ms-2">
                 {% if job.match_score >= 80 %}
-                    <span class="badge" style="background:#10b981;" aria-label="Strong match: {{ job.match_score }}%">
+                    <span class="score score-strong" title="{{ job.match_reasoning or '' }}"><span class="score-num">{{ job.match_score }}</span><span class="score-pct">%</span></span>
                 {% elif job.match_score >= 60 %}
-                    <span class="badge" style="background:#f59e0b;" aria-label="Partial match: {{ job.match_score }}%">
+                    <span class="score score-mid" title="{{ job.match_reasoning or '' }}"><span class="score-num">{{ job.match_score }}</span><span class="score-pct">%</span></span>
                 {% else %}
-                    <span class="badge bg-secondary" aria-label="Low match: {{ job.match_score }}%">
+                    <span class="score score-low" title="{{ job.match_reasoning or '' }}"><span class="score-num">{{ job.match_score }}</span><span class="score-pct">%</span></span>
                 {% endif %}
-                        <i class="bi bi-stars me-1"></i>{{ job.match_score }}%
-                    </span>
+            {% endif %}
+            {% if status == 'Applied' %}
+                <span class="pill pill-applied"><span class="pill-dot"></span>Applied</span>
+            {% elif status == 'Thinking' %}
+                <span class="pill pill-thinking"><span class="pill-dot"></span>Thinking</span>
+            {% elif status == 'Ignored' %}
+                <span class="pill pill-ignored"><span class="pill-dot"></span>Ignored</span>
+            {% else %}
+                <span class="pill pill-new"><span class="pill-dot"></span>New</span>
+            {% endif %}
+        </div>
+
+        <div class="job-actions" onclick="event.stopPropagation()">
+            <form method="POST" action="/job-board/{{ job.id }}/update-status">
+                <input type="hidden" name="status" value="Applied">
+                <button type="submit" class="btn btn-icon btn-ghost {% if status == 'Applied' %}is-active{% endif %}" title="Mark as applied">
+                    <i class="bi bi-check2"></i>
+                </button>
+            </form>
+            <form method="POST" action="/job-board/{{ job.id }}/update-status">
+                <input type="hidden" name="status" value="Thinking">
+                <button type="submit" class="btn btn-icon btn-ghost {% if status == 'Thinking' %}is-active{% endif %}" title="Thinking">
+                    <i class="bi bi-bookmark"></i>
+                </button>
+            </form>
+            <form method="POST" action="/job-board/{{ job.id }}/update-status">
+                <input type="hidden" name="status" value="Ignored">
+                <button type="submit" class="btn btn-icon btn-danger-ghost" title="Ignore (deletes immediately)">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </form>
+            {% if job.url %}
+            <a href="{{ job.url }}" target="_blank" rel="noopener" class="btn btn-icon btn-ghost" title="Open original">
+                <i class="bi bi-box-arrow-up-right"></i>
+            </a>
+            {% endif %}
+            <button type="button" class="btn btn-icon btn-ghost" onclick="fetchDescription('{{ job.id }}', this)" title="Refresh description + AI">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+
+        <div class="job-detail" id="details-{{ job.id }}">
+            {% if job.ai_summary and job.ai_summary != '—' %}
+            <div class="detail-block">
+                <h4>AI summary</h4>
+                <p>{{ job.ai_summary }}</p>
             </div>
             {% endif %}
-
-            <div class="job-card-actions">
-                <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
-                    <input type="hidden" name="status" value="Applied">
-                    <button type="submit" class="btn btn-sm {% if status == 'Applied' %}btn-success{% else %}btn-outline-success{% endif %}" title="Apply">
-                        <i class="bi bi-check-lg"></i>
-                    </button>
-                </form>
-                <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
-                    <input type="hidden" name="status" value="Thinking">
-                    <button type="submit" class="btn btn-sm {% if status == 'Thinking' %}btn-warning{% else %}btn-outline-warning{% endif %}" title="Thinking">
-                        <i class="bi bi-hourglass"></i>
-                    </button>
-                </form>
-                <form method="POST" action="/job-board/{{ job.id }}/update-status" style="display: inline;">
-                    <input type="hidden" name="status" value="Ignored">
-                    <button type="submit" class="btn btn-sm {% if status == 'Ignored' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" title="Ignore">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </form>
-                {% if job.url %}
-                <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View on LinkedIn">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                </a>
-                {% endif %}
-                <button type="button" class="btn btn-sm btn-outline-info" onclick="fetchDescription('{{ job.id }}')" title="Fetch Description">
-                    <i class="bi bi-arrow-repeat"></i>
-                </button>
+            {% if job.match_score is not none and job.match_reasoning %}
+            <div class="detail-block">
+                <h4>Match reasoning</h4>
+                <p>{{ job.match_reasoning }}</p>
             </div>
-
-            <div id="fetch-status-{{ job.id }}" class="fetch-status"></div>
-
-            <!-- Expandable Details -->
-            <div class="job-card-details" id="details-{{ job.id }}">
-                {% if job.description %}
-                <div class="detail-section">
-                    <h6><i class="bi bi-file-text me-2"></i>Job Description</h6>
-                    <p class="description-text">{{ job.description[:800] }}{% if job.description|length > 800 %}...{% endif %}</p>
-                </div>
-                {% endif %}
-
-                {% if job.ai_summary %}
-                <div class="detail-section">
-                    <h6><i class="bi bi-robot me-2"></i>AI Summary</h6>
-                    <p>{{ job.ai_summary }}</p>
-                </div>
-                {% endif %}
-
-                {% if job.match_score is not none %}
-                <div class="detail-section">
-                    <div class="mt-2">
-                        <h6><i class="bi bi-stars me-1"></i>Match Score</h6>
-                        <span class="{% if job.match_score >= 80 %}text-success{% elif job.match_score >= 60 %}text-warning{% else %}text-muted{% endif %}">
-                            {{ job.match_score }}%
-                        </span>
-                        {% if job.match_reasoning %}
-                        <div class="text-muted small mt-1">{{ job.match_reasoning }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if job.ai_requirements %}
-                <div class="detail-section">
-                    <h6><i class="bi bi-tools me-2"></i>Requirements</h6>
-                    <p>{{ job.ai_requirements }}</p>
-                </div>
-                {% endif %}
-
-                <div class="detail-section">
-                    <h6><i class="bi bi-info-circle me-2"></i>Details</h6>
-                    <div class="detail-grid">
-                        <span>Type:</span><span>{{ job.job_type or '-' }}</span>
-                        <span>Level:</span><span>{{ job.experience_level or '-' }}</span>
-                        <span>Work:</span><span>{{ job.work_type or '-' }}</span>
-                        <span>Posted:</span><span>{{ job.posted_date[:10] if job.posted_date else job.created_at[:10] if job.created_at else '-' }}</span>
-                    </div>
-                </div>
+            {% endif %}
+            {% if job.description %}
+            <div class="detail-block">
+                <h4>Job description</h4>
+                <p>{{ job.description[:1200] }}{% if job.description|length > 1200 %}…{% endif %}</p>
+            </div>
+            {% endif %}
+            {% if job.ai_requirements %}
+            <div class="detail-block">
+                <h4>Requirements</h4>
+                <p>{{ job.ai_requirements }}</p>
+            </div>
+            {% endif %}
+            <div class="detail-block">
+                <h4>Details</h4>
+                <dl class="detail-meta">
+                    <dt>Type</dt><dd>{{ job.job_type or '—' }}</dd>
+                    <dt>Level</dt><dd>{{ job.experience_level or '—' }}</dd>
+                    <dt>Work</dt><dd>{{ job.work_type or '—' }}</dd>
+                    <dt>Posted</dt><dd>{{ (job.posted_date or job.created_at)[:10] if (job.posted_date or job.created_at) else '—' }}</dd>
+                    {% if not job.description %}
+                    <dt>State</dt><dd class="text-muted" style="font-family:var(--font-sans);">No description yet — click <i class="bi bi-arrow-clockwise"></i> above</dd>
+                    {% endif %}
+                </dl>
             </div>
         </div>
-        {% endfor %}
     </div>
-
-    <div class="text-center text-muted py-3">
-        Showing {{ jobs|length }} jobs - tap to see details
-    </div>
+    {% endfor %}
+</div>
 {% else %}
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <i class="bi bi-briefcase" style="font-size: 4rem; color: var(--zephyr-foam);"></i>
-            <h4 class="mt-3">No jobs found</h4>
-            <p class="text-muted">The scraper will find new jobs for you!</p>
-            <a href="/search" class="btn btn-zephyr mt-2">
-                <i class="bi bi-plus-lg me-2"></i>Create Search
-            </a>
-        </div>
+<div class="card">
+    <div class="empty">
+        <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+        <p class="empty-title">Nothing here yet</p>
+        <p class="empty-text">Your scraper will populate this list. Create a search if you haven't already.</p>
+        <a href="/search" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Create search</a>
     </div>
+</div>
 {% endif %}
 
 <script>
-function toggleJobDetails(jobId) {
-    var detailsRow = document.getElementById('details-' + jobId);
-    var icon = document.getElementById('icon-' + jobId);
+function toggleJobDetails(jobId, row) {
+    var detail = document.getElementById('details-' + jobId);
+    if (!detail) return;
+    var parent = row || detail.closest('.job-row');
+    if (parent) parent.classList.toggle('expanded');
+}
 
-    if (detailsRow.classList.contains('open')) {
-        detailsRow.classList.remove('open');
-        icon.classList.remove('bi-chevron-up');
-        icon.classList.add('bi-chevron-down');
-    } else {
-        detailsRow.classList.add('open');
-        icon.classList.remove('bi-chevron-down');
-        icon.classList.add('bi-chevron-up');
+async function fetchDescription(jobId, btn) {
+    var icon = btn.querySelector('i');
+    var orig = icon.className;
+    btn.disabled = true;
+    icon.className = 'bi bi-arrow-repeat';
+    icon.style.animation = 'spin 1s linear infinite';
+    try {
+        var resp = await fetch('/job-board/' + jobId + '/fetch-description', {method: 'POST'});
+        if (resp.ok) { window.location.reload(); return; }
+        var data = await resp.json();
+        alert(data.error || 'Failed to fetch');
+    } catch (e) {
+        alert('Network error');
+    } finally {
+        btn.disabled = false;
+        icon.className = orig;
+        icon.style.animation = '';
     }
 }
 </script>
-
-<style>
-    .jobs-list {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        padding: 0 0.75rem;
-    }
-
-    .job-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.25rem;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-        cursor: pointer;
-    }
-
-    .job-card-header {
-        margin-bottom: 0.75rem;
-    }
-
-    .job-title-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-
-    .job-title {
-        font-weight: 600;
-        font-size: 1rem;
-        line-height: 1.3;
-    }
-
-    .expand-icon {
-        color: #999;
-        font-size: 0.875rem;
-        transition: transform 0.2s;
-    }
-
-    .job-company {
-        color: #555;
-        font-size: 0.9rem;
-        margin-top: 0.25rem;
-    }
-
-    .job-location {
-        color: #777;
-        font-size: 0.8rem;
-        margin-top: 0.25rem;
-    }
-
-    .job-snippet {
-        color: #666;
-        font-size: 0.8rem;
-        margin-top: 0.5rem;
-        line-height: 1.4;
-        padding: 0.5rem;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border-left: 3px solid #3b82f6;
-    }
-
-    .job-card-status {
-        margin-bottom: 0.75rem;
-    }
-
-    .job-card-actions {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-
-    .job-card-actions .btn {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.875rem;
-    }
-
-    .job-card-details {
-        display: none;
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid #eee;
-    }
-
-    .job-card-details.open {
-        display: block;
-    }
-
-    .detail-section {
-        margin-bottom: 1rem;
-    }
-
-    .detail-section:last-child {
-        margin-bottom: 0;
-    }
-
-    .detail-section h6 {
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        color: #666;
-        margin-bottom: 0.5rem;
-    }
-
-    .detail-section p {
-        font-size: 0.9rem;
-        color: #333;
-        margin-bottom: 0;
-    }
-
-    .detail-grid {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 0.25rem 1rem;
-        font-size: 0.85rem;
-    }
-
-    .detail-grid span:first-child {
-        color: #666;
-    }
-
-    /* Desktop - table style */
-    @media (min-width: 769px) {
-        .jobs-list {
-            padding: 0;
-        }
-
-        .job-card {
-            display: grid;
-            grid-template-columns: 1fr auto auto auto;
-            gap: 1rem;
-            align-items: center;
-            cursor: default;
-        }
-
-        .job-card-header {
-            margin-bottom: 0;
-        }
-
-        .job-card-status {
-            margin-bottom: 0;
-        }
-
-        .job-card-actions {
-            margin-bottom: 0;
-        }
-
-        .job-card-details {
-            grid-column: 1 / -1;
-            margin-top: 1rem;
-        }
-
-        .job-card:hover {
-            background: #fafafa;
-        }
-    }
-
-    /* Buttons */
-    .btn-success { background-color: #10B981; border-color: #10B981; }
-    .btn-outline-success { border-color: #10B981; color: #10B981; }
-    .btn-outline-success:hover { background-color: #10B981; color: white; }
-
-    .btn-warning { background-color: #F59E0B; border-color: #F59E0B; color: white; }
-    .btn-outline-warning { border-color: #F59E0B; color: #F59E0B; }
-    .btn-outline-warning:hover { background-color: #F59E0B; color: white; }
-
-    .btn-outline-primary { border-color: #3b82f6; color: #3b82f6; }
-    .btn-outline-primary:hover { background-color: #3b82f6; color: white; }
-</style>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 {% endblock %}
