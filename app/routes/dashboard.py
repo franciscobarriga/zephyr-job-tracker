@@ -9,6 +9,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 from app.auth import get_current_user, supabase
+from app.utils.cleanup import cleanup_total_for_user
 
 router = APIRouter()
 
@@ -100,6 +101,12 @@ async def dashboard(request: Request, user = Depends(get_current_user)):
         # Get username from user metadata
         username = user.get("user_metadata", {}).get("username", user.get("email", "").split("@")[0])
 
+        # Stale-job cleanup count (last 30 days)
+        try:
+            cleanup_count_30d = cleanup_total_for_user(supabase, user["id"], days=30)
+        except Exception:
+            cleanup_count_30d = 0
+
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "user": user,
@@ -116,7 +123,8 @@ async def dashboard(request: Request, user = Depends(get_current_user)):
             "recent_jobs": sorted_jobs,
             "user_level": user_level,
             "xp_progress": xp_progress,
-            "user_streak": user_streak
+            "user_streak": user_streak,
+            "cleanup_count_30d": cleanup_count_30d,
         })
 
     except Exception as e:

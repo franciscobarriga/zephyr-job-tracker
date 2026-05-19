@@ -80,8 +80,13 @@ async def update_job_status(
     """Update job application status"""
 
     try:
+        # Ignored = hard delete immediately (user explicitly rejected)
+        if status == "Ignored":
+            supabase.table("jobs").delete().eq("id", job_id).eq("user_id", user["id"]).execute()
+            return RedirectResponse(url="/job-board", status_code=303)
+
         # Build update data
-        update_data = {"status": status}
+        update_data = {"status": status, "last_viewed_at": datetime.utcnow().isoformat()}
 
         # If marking as Applied, track when it was applied
         if status == "Applied":
@@ -92,6 +97,23 @@ async def update_job_status(
 
     except Exception as e:
         return {"error": str(e)}
+
+
+@router.post("/{job_id}/view")
+async def mark_job_viewed(job_id: int, user=Depends(get_current_user)):
+    """Lightweight ping that records the user expanded/viewed this job."""
+    supabase.table("jobs").update({
+        "last_viewed_at": datetime.utcnow().isoformat(),
+    }).eq("id", job_id).eq("user_id", user["id"]).execute()
+    return {"ok": True}
+
+
+@router.post("/cleanup-stale")
+async def trigger_cleanup(user=Depends(get_current_user)):
+    """Manually trigger stale-job cleanup for the current user."""
+    from app.utils.cleanup import cleanup_stale_jobs
+    result = cleanup_stale_jobs(supabase, user_id=user["id"])
+    return result
 
 
 @router.post("/{job_id}/fetch-description")
@@ -137,6 +159,7 @@ async def fetch_job_description(
         "description": description,
         "ai_summary": analysis.get("summary"),
         "ai_requirements": analysis.get("requirements"),
+        "last_viewed_at": datetime.utcnow().isoformat(),
     }
     if resume_text:
         match = score_job_match(description, resume_text)
