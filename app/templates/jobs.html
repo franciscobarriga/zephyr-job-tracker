@@ -6,22 +6,29 @@
 <div class="page-header">
     <div>
         <h1 class="page-title">Jobs</h1>
-        <p class="page-subtitle">{{ jobs|length }} role{{ '' if jobs|length == 1 else 's' }} to review.</p>
+        <p class="page-subtitle">{{ jobs|length }} role{{ '' if jobs|length == 1 else 's' }} to review. Press <kbd>?</kbd> for shortcuts.</p>
     </div>
-    <a href="/dashboard" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    <div class="flex gap-2 items-center">
+        <label class="text-muted text-sm">Sort</label>
+        <select class="select" id="sort-select" onchange="applySort(this.value)" style="width:auto;min-width:160px;">
+            <option value="match"{% if sort == 'match' %} selected{% endif %}>Match score</option>
+            <option value="date"{% if sort == 'date' or not sort %} selected{% endif %}>Newest</option>
+            <option value="company"{% if sort == 'company' %} selected{% endif %}>Company</option>
+        </select>
+    </div>
 </div>
 
 <div class="filter-tabs">
-    <a href="/job-board" class="filter-tab {% if not status_filter or status_filter == 'all' %}active{% endif %}">
+    <a href="/job-board{% if sort %}?sort={{ sort }}{% endif %}" class="filter-tab {% if not status_filter or status_filter == 'all' %}active{% endif %}">
         All <span class="filter-tab-count">{{ stats.new + stats.thinking + stats.ignored }}</span>
     </a>
-    <a href="/job-board?status_filter=New" class="filter-tab {% if status_filter == 'New' %}active{% endif %}">
+    <a href="/job-board?status_filter=New{% if sort %}&sort={{ sort }}{% endif %}" class="filter-tab {% if status_filter == 'New' %}active{% endif %}">
         New <span class="filter-tab-count">{{ stats.new }}</span>
     </a>
-    <a href="/job-board?status_filter=Thinking" class="filter-tab {% if status_filter == 'Thinking' %}active{% endif %}">
+    <a href="/job-board?status_filter=Thinking{% if sort %}&sort={{ sort }}{% endif %}" class="filter-tab {% if status_filter == 'Thinking' %}active{% endif %}">
         Thinking <span class="filter-tab-count">{{ stats.thinking }}</span>
     </a>
-    <a href="/job-board?status_filter=Ignored" class="filter-tab {% if status_filter == 'Ignored' %}active{% endif %}">
+    <a href="/job-board?status_filter=Ignored{% if sort %}&sort={{ sort }}{% endif %}" class="filter-tab {% if status_filter == 'Ignored' %}active{% endif %}">
         Ignored <span class="filter-tab-count">{{ stats.ignored }}</span>
     </a>
 </div>
@@ -93,9 +100,6 @@
                 <i class="bi bi-box-arrow-up-right"></i>
             </a>
             {% endif %}
-            <button type="button" class="btn btn-icon btn-ghost" onclick="fetchDescription('{{ job.id }}', this)" title="Refresh description + AI">
-                <i class="bi bi-arrow-clockwise"></i>
-            </button>
         </div>
 
         <div class="job-detail" id="details-{{ job.id }}">
@@ -131,7 +135,7 @@
                     <dt>Work</dt><dd>{{ job.work_type or '—' }}</dd>
                     <dt>Posted</dt><dd>{{ (job.posted_date or job.created_at)[:10] if (job.posted_date or job.created_at) else '—' }}</dd>
                     {% if not job.description %}
-                    <dt>State</dt><dd class="text-muted" style="font-family:var(--font-sans);">No description yet — click <i class="bi bi-arrow-clockwise"></i> above</dd>
+                    <dt>State</dt><dd class="text-muted" style="font-family:var(--font-sans);">Description pending — next scraper run will fill it in</dd>
                     {% endif %}
                 </dl>
             </div>
@@ -143,12 +147,72 @@
 <div class="card">
     <div class="empty">
         <div class="empty-icon"><i class="bi bi-inbox"></i></div>
-        <p class="empty-title">Nothing here yet</p>
-        <p class="empty-text">Your scraper will populate this list. Create a search if you haven't already.</p>
-        <a href="/search" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Create search</a>
+        <p class="empty-title">No jobs yet</p>
+        <p class="empty-text">The scraper runs twice a day. Set up a search to start populating your board.</p>
+        <a href="/search" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Create a search</a>
     </div>
 </div>
 {% endif %}
+
+<!-- Shortcuts modal -->
+<div id="shortcuts-modal" class="modal-overlay" onclick="if (event.target === this) this.classList.remove('open')">
+    <div class="modal-card">
+        <div class="modal-head">
+            <span style="font-weight:500;">Keyboard shortcuts</span>
+            <button class="btn btn-icon btn-ghost" onclick="document.getElementById('shortcuts-modal').classList.remove('open')"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="shortcut-row"><kbd>j</kbd> <kbd>k</kbd><span>Move focus down / up</span></div>
+            <div class="shortcut-row"><kbd>e</kbd><span>Expand / collapse</span></div>
+            <div class="shortcut-row"><kbd>a</kbd><span>Mark as Applied</span></div>
+            <div class="shortcut-row"><kbd>t</kbd><span>Mark as Thinking</span></div>
+            <div class="shortcut-row"><kbd>x</kbd><span>Ignore (deletes)</span></div>
+            <div class="shortcut-row"><kbd>?</kbd><span>Show this menu</span></div>
+            <div class="shortcut-row"><kbd>esc</kbd><span>Close</span></div>
+        </div>
+    </div>
+</div>
+
+<style>
+.job-row.is-focused {
+    background: var(--accent-soft);
+    box-shadow: inset 2px 0 0 var(--accent);
+}
+kbd {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 2px 6px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    color: var(--text-2);
+    margin-right: 2px;
+}
+.modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(12,10,9,0.4);
+    z-index: 100;
+    place-items: center;
+}
+.modal-overlay.open { display: grid; }
+.modal-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    width: 360px;
+    max-width: calc(100vw - 32px);
+}
+.modal-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+}
+.modal-body { padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+.shortcut-row { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.shortcut-row span { color: var(--text-2); }
+</style>
 
 <script>
 function toggleJobDetails(jobId, row) {
@@ -158,25 +222,43 @@ function toggleJobDetails(jobId, row) {
     if (parent) parent.classList.toggle('expanded');
 }
 
-async function fetchDescription(jobId, btn) {
-    var icon = btn.querySelector('i');
-    var orig = icon.className;
-    btn.disabled = true;
-    icon.className = 'bi bi-arrow-repeat';
-    icon.style.animation = 'spin 1s linear infinite';
-    try {
-        var resp = await fetch('/job-board/' + jobId + '/fetch-description', {method: 'POST'});
-        if (resp.ok) { window.location.reload(); return; }
-        var data = await resp.json();
-        alert(data.error || 'Failed to fetch');
-    } catch (e) {
-        alert('Network error');
-    } finally {
-        btn.disabled = false;
-        icon.className = orig;
-        icon.style.animation = '';
-    }
+function applySort(value) {
+    var params = new URLSearchParams(window.location.search);
+    params.set('sort', value);
+    window.location.search = params.toString();
 }
+
+// Keyboard shortcuts (Linear-style)
+(function() {
+    var rows = function() { return Array.from(document.querySelectorAll('.job-row')); };
+    var idx = -1;
+    function highlight(i) {
+        var all = rows();
+        if (!all.length) return;
+        idx = (i + all.length) % all.length;
+        all.forEach(function(r, n) { r.classList.toggle('is-focused', n === idx); });
+        all[idx].scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }
+    function clickAction(selector) {
+        var all = rows();
+        if (idx < 0 || idx >= all.length) return;
+        var btn = all[idx].querySelector(selector);
+        if (btn) btn.click();
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.target.matches('input, textarea, select')) return;
+        if (e.key === 'j') { e.preventDefault(); highlight(idx + 1); }
+        else if (e.key === 'k') { e.preventDefault(); highlight(idx - 1); }
+        else if (e.key === 'e' || e.key === 'Enter') {
+            var all = rows();
+            if (idx >= 0 && all[idx]) { e.preventDefault(); all[idx].click(); }
+        }
+        else if (e.key === 'a') { e.preventDefault(); clickAction('form[action$="/update-status"] input[value="Applied"] + button, button[title*="applied" i]'); }
+        else if (e.key === 't') { e.preventDefault(); clickAction('button[title="Thinking"]'); }
+        else if (e.key === 'x') { e.preventDefault(); clickAction('button[title^="Ignore"]'); }
+        else if (e.key === '?') { e.preventDefault(); document.getElementById('shortcuts-modal').classList.add('open'); }
+        else if (e.key === 'Escape') { document.getElementById('shortcuts-modal').classList.remove('open'); }
+    });
+})();
 </script>
-<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 {% endblock %}

@@ -22,51 +22,60 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
 
+_SORT_KEYS = {
+    "match":   lambda j: (-(j.get("match_score") or -1), j.get("created_at", "")),
+    "date":    lambda j: (-(_iso_rank(j.get("created_at"))),),
+    "company": lambda j: ((j.get("company") or "").lower(), j.get("title") or ""),
+}
+
+
+def _iso_rank(s):
+    """Big number that sorts newest-first when negated."""
+    return int((s or "0").replace("-", "").replace(":", "").replace("T", "").replace(".", "")[:14] or 0)
+
+
 @router.get("/", response_class=HTMLResponse)
-async def list_jobs(request: Request, user = Depends(get_current_user), status_filter: str = Query(None)):
+async def list_jobs(
+    request: Request,
+    user = Depends(get_current_user),
+    status_filter: str = Query(None),
+    sort: str = Query("date"),
+):
     """View all job applications"""
 
     try:
-        # Fetch all jobs
         response = supabase.table("jobs").select("*").eq("user_id", user["id"]).execute()
         all_jobs = response.data or []
 
-        # Filter out Applied jobs (they go to dashboard)
+        # Non-applied jobs (Applied lives on dashboard)
         jobs = [j for j in all_jobs if j.get("status") != "Applied"]
 
-        # Apply status filter if provided
         if status_filter and status_filter != "all":
             jobs = [j for j in jobs if j.get("status") == status_filter]
 
-        # Sort by created date (newest first) for non-applied jobs
-        jobs = sorted(jobs, key=lambda x: x.get("created_at", ""), reverse=True)
-
-        # Calculate stats
-        total_jobs = len(all_jobs)
-        applied_count = len([j for j in all_jobs if j.get("status") == "Applied"])
-        thinking_count = len([j for j in all_jobs if j.get("status") == "Thinking"])
-        ignored_count = len([j for j in all_jobs if j.get("status") == "Ignored"])
-        new_count = len([j for j in all_jobs if j.get("status") != "Applied" and (j.get("status") == "New" or not j.get("status"))])
+        sort_key = _SORT_KEYS.get(sort, _SORT_KEYS["date"])
+        jobs = sorted(jobs, key=sort_key)
 
         return templates.TemplateResponse("jobs.html", {
             "request": request,
             "user": user,
             "jobs": jobs,
             "status_filter": status_filter,
+            "sort": sort,
             "stats": {
-                "total": total_jobs,
-                "applied": applied_count,
-                "thinking": thinking_count,
-                "ignored": ignored_count,
-                "new": new_count
-            }
+                "total": len(all_jobs),
+                "applied": len([j for j in all_jobs if j.get("status") == "Applied"]),
+                "thinking": len([j for j in all_jobs if j.get("status") == "Thinking"]),
+                "ignored": len([j for j in all_jobs if j.get("status") == "Ignored"]),
+                "new": len([j for j in all_jobs if j.get("status") != "Applied" and (j.get("status") == "New" or not j.get("status"))]),
+            },
         })
-        
+
     except Exception as e:
         return templates.TemplateResponse("jobs.html", {
             "request": request,
             "user": user,
-            "error": f"Error loading jobs: {str(e)}"
+            "error": f"Error loading jobs: {str(e)}",
         })
 
 
@@ -116,63 +125,7 @@ async def trigger_cleanup(user=Depends(get_current_user)):
     return result
 
 
-@router.post("/{job_id}/fetch-description")
-async def fetch_job_description(
-    job_id: int,
-    user=Depends(get_current_user),
-):
-    """Fetch job description from LinkedIn and run AI analysis + match scoring."""
-    import sys
-    from pathlib import Path as _Path
-    _root = str(_Path(__file__).resolve().parent.parent.parent)
-    if _root not in sys.path:
-        sys.path.insert(0, _root)
-    from scraper import get_job_description  # noqa: E402
-    from app.utils.ai_client import analyze_job, score_job_match
-    from playwright.async_api import async_playwright
-
-    response = supabase.table("jobs").select("url").eq("id", job_id).eq("user_id", user["id"]).execute()
-    if not response.data:
-        return JSONResponse({"error": "Job not found"}, status_code=404)
-
-    job_url = response.data[0].get("url")
-    if not job_url:
-        return JSONResponse({"error": "No URL for this job"}, status_code=400)
-
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        try:
-            context = await browser.new_context(
-                extra_http_headers={"Accept-Language": "en-US,en;q=0.9"},
-                user_agent=(
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
-                ),
-            )
-            page = await context.new_page()
-            description = await get_job_description(page, job_url)
-        finally:
-            await browser.close()
-
-    if not description:
-        return JSONResponse({"error": "Could not fetch description"}, status_code=422)
-
-    analysis = analyze_job(description)
-
-    profile = supabase.table("profiles").select("resume_text").eq("id", user["id"]).single().execute()
-    resume_text = (profile.data or {}).get("resume_text") or ""
-
-    update_data = {
-        "description": description,
-        "ai_summary": analysis.get("summary"),
-        "ai_requirements": analysis.get("requirements"),
-        "last_viewed_at": datetime.utcnow().isoformat(),
-    }
-    if resume_text:
-        match = score_job_match(description, resume_text)
-        update_data["match_score"] = match["score"]
-        update_data["match_reasoning"] = match["reasoning"]
-
-    supabase.table("jobs").update(update_data).eq("id", job_id).execute()
-
-    return {"success": True, "description": description[:200] + "..."}
+# Note: on-demand fetch-description was removed. Descriptions are fetched
+# by the scraper job (scraper.py:analyze_new_jobs) the same run they're
+# discovered, so by the time the user sees a row it already has description,
+# AI summary, and match score.
