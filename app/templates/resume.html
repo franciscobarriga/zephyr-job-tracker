@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Resume - Zephyr{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1 class="mb-0"><i class="bi bi-file-earmark-person"></i> My Resume</h1>
+    </div>
+    <a href="/dashboard" class="btn btn-zephyr-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Back
+    </a>
+</div>
+
+{% if uploaded %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle me-2"></i>Resume uploaded successfully!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-upload me-2"></i>Upload Resume</h5>
+    </div>
+    <div class="card-body">
+        {% if has_resume %}
+        <div class="alert alert-info mb-3">
+            <i class="bi bi-file-earmark-check me-2"></i>
+            Current resume: <strong>{{ resume_filename }}</strong>
+            — Upload a new file to replace it.
+        </div>
+        {% endif %}
+        <form method="POST" action="/resume/upload" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="file" class="form-label">Resume file (PDF or DOCX, max 5 MB)</label>
+                <input type="file" class="form-control" id="file" name="file" accept=".pdf,.docx" required>
+            </div>
+            <button type="submit" class="btn btn-zephyr">
+                <i class="bi bi-cloud-upload me-2"></i>Upload Resume
+            </button>
+        </form>
+    </div>
+</div>
+
+{% if has_resume %}
+<div class="card mt-4">
+    <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+            <h6 class="mb-1">Score existing jobs</h6>
+            <p class="text-muted small mb-0">Run match scoring on all jobs scraped before your resume was uploaded.</p>
+        </div>
+        <button class="btn btn-zephyr-secondary ms-3" id="rescoreBtn" onclick="rescoreAll()">
+            <i class="bi bi-stars me-2"></i>Score All
+        </button>
+    </div>
+</div>
+<script>
+async function rescoreAll() {
+    const btn = document.getElementById('rescoreBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Scoring...';
+    try {
+        const resp = await fetch('/resume/rescore-all', {method: 'POST'});
+        const data = await resp.json();
+        btn.disabled = false;
+        if (!resp.ok) {
+            btn.innerHTML = '<i class="bi bi-x-circle me-2"></i>Error: ' + (data.error || 'Failed');
+        } else {
+            btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Done (' + (data.scored || 0) + ' scored)';
+        }
+    } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-x-circle me-2"></i>Failed — try again';
+    }
+}
+</script>
+{% endif %}
+
+{% if not has_resume %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-file-earmark-person" style="font-size:3rem;color:var(--zephyr-primary);"></i>
+        <h5 class="mt-3">No resume uploaded yet</h5>
+        <p class="text-muted">Upload your resume to enable AI match scoring on job listings.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

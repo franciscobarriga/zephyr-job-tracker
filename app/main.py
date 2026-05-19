@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 
 from app.auth import get_current_user, supabase
-from app.routes import auth, dashboard, jobs, search
+from app.routes import auth, dashboard, jobs, search, resume
 
 # App initialization
 app = FastAPI(
@@ -37,6 +37,13 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 app.include_router(jobs.router, prefix="/job-board", tags=["Job Board"])
 app.include_router(search.router, prefix="/search", tags=["Search Configs"])
+app.include_router(resume.router, prefix="/resume", tags=["Resume"])
+
+
+@app.exception_handler(401)
+async def unauthorized_handler(request: Request, exc: HTTPException):
+    """Redirect unauthenticated requests to login"""
+    return RedirectResponse(url="/auth/login", status_code=302)
 
 
 @app.get("/", response_class=HTMLResponse)
