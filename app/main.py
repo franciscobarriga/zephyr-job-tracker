@@ -48,11 +48,10 @@ async def unauthorized_handler(request: Request, exc: HTTPException):
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    """Landing page - redirect to dashboard if logged in, else login"""
-    user = request.session.get("user")
-    if user:
+    """Marketing landing for anonymous visitors; dashboard for logged-in users."""
+    if request.session.get("user"):
         return RedirectResponse(url="/dashboard")
-    return RedirectResponse(url="/auth/login")
+    return templates.TemplateResponse(request, "landing.html")
 
 
 @app.get("/health")

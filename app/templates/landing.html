@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#fafaf9">
+    <title>Zephyr — Job hunting on autopilot</title>
+    <meta name="description" content="Zephyr finds matching roles, scores each one against your resume, and tailors your application — so you stop applying for weeks and start interviewing in days.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/static/main.css">
+    <link rel="stylesheet" href="/static/landing.css">
+</head>
+<body class="landing">
+
+<nav class="landing-nav">
+    <a href="/" class="landing-brand">
+        <span class="brand-mark">Z</span>
+        <span>Zephyr</span>
+    </a>
+    <div class="landing-nav-right">
+        <a href="/auth/login" class="landing-nav-link">Sign in</a>
+        <a href="/auth/signup" class="btn btn-accent">Sign up</a>
+    </div>
+</nav>
+
+<main class="landing-main">
+
+<section class="hero">
+    <div class="hero-text">
+        <h1 class="hero-title">
+            Stop applying for weeks.
+            <span class="hero-accent">Start interviewing in days.</span>
+        </h1>
+        <p class="hero-sub">
+            Zephyr scrapes every fresh role, scores each one against your resume,
+            and tailors your application — so applying takes seconds instead of
+            an afternoon.
+        </p>
+        <div class="hero-cta">
+            <a href="/auth/signup" class="btn btn-accent btn-lg">Start free <i class="bi bi-arrow-right"></i></a>
+            <span class="hero-cta-note">No credit card required.</span>
+        </div>
+    </div>
+</section>
+
+<section class="features">
+    <div class="feature-card feature-card--alpha">
+        <div class="feature-head">
+            <span class="feature-icon"><i class="bi bi-list-stars"></i></span>
+            <h3>Smart match score</h3>
+            <span class="feature-eyebrow">live ranking</span>
+        </div>
+        <p class="feature-body">Every new role gets a 0–100 score against your resume. Top matches surface first; the rest stays out of your way.</p>
+        <div class="mock mock-jobs">
+            <div class="mock-row">
+                <div class="mock-row-main">
+                    <div class="mock-row-title">Senior Marketing Analyst</div>
+                    <div class="mock-row-meta">Stripe · Remote</div>
+                </div>
+                <span class="mock-score mock-score--strong">87<span class="mock-score-pct">%</span></span>
+            </div>
+            <div class="mock-row">
+                <div class="mock-row-main">
+                    <div class="mock-row-title">Growth Marketing Lead</div>
+                    <div class="mock-row-meta">Notion · Remote</div>
+                </div>
+                <span class="mock-score mock-score--strong">82<span class="mock-score-pct">%</span></span>
+            </div>
+            <div class="mock-row">
+                <div class="mock-row-main">
+                    <div class="mock-row-title">Performance Marketer</div>
+                    <div class="mock-row-meta">Loom · NYC</div>
+                </div>
+                <span class="mock-score mock-score--mid">64<span class="mock-score-pct">%</span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="feature-card feature-card--beta">
+        <div class="feature-head">
+            <span class="feature-icon"><i class="bi bi-file-text"></i></span>
+            <h3>AI-tailored resume</h3>
+            <span class="feature-eyebrow">per job</span>
+        </div>
+        <p class="feature-body">For any role you like, Zephyr rewrites your bullet points to match the job description and drafts a matching cover letter.</p>
+        <div class="mock mock-doc">
+            <div class="mock-doc-section">
+                <div class="mock-doc-label">Tailored bullets · Senior Marketing Analyst</div>
+                <div class="mock-doc-line">— Built attribution models in BigQuery that lifted paid ROAS 23%</div>
+                <div class="mock-doc-line">— Owned weekly executive dashboards in Tableau (12k+ MAUs)</div>
+                <div class="mock-doc-line">— Led migration off Mixpanel → reduced reporting time 40%</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="feature-card feature-card--gamma">
+        <div class="feature-head">
+            <span class="feature-icon"><i class="bi bi-lightning-charge"></i></span>
+            <h3>Always scraping</h3>
+            <span class="feature-eyebrow">every 12h</span>
+        </div>
+        <p class="feature-body">Set a search once. We sweep LinkedIn twice a day, fetch the full description, and surface fresh roles before you open the laptop.</p>
+        <div class="mock mock-status">
+            <div class="mock-status-row">
+                <div class="mock-status-dot mock-status-dot--green"></div>
+                <span class="mock-status-text">Last run · 1,247 jobs scanned · 12 new</span>
+                <span class="mock-status-time">3m ago</span>
+            </div>
+            <div class="mock-status-row">
+                <div class="mock-status-dot mock-status-dot--green"></div>
+                <span class="mock-status-text">Senior Marketing Analyst at Stripe</span>
+                <span class="mock-status-time">3m ago</span>
+            </div>
+            <div class="mock-status-row">
+                <div class="mock-status-dot mock-status-dot--green"></div>
+                <span class="mock-status-text">Performance Marketer at Loom</span>
+                <span class="mock-status-time">3m ago</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="how-it-works">
+    <h2 class="section-title">Built for the only step that matters: applying.</h2>
+    <div class="steps">
+        <div class="step">
+            <div class="step-num">01</div>
+            <h4>Drop your resume</h4>
+            <p>PDF or DOCX. We extract it once — used for matching and tailoring.</p>
+        </div>
+        <div class="step">
+            <div class="step-num">02</div>
+            <h4>Tell us what you want</h4>
+            <p>Title and city. Save the search. Zephyr handles the rest, 24/7.</p>
+        </div>
+        <div class="step">
+            <div class="step-num">03</div>
+            <h4>Apply only to fits</h4>
+            <p>Skip the long tail. Tailor and submit the matches that actually look like you.</p>
+        </div>
+    </div>
+</section>
+
+<section class="cta-strip">
+    <h2>Reclaim your afternoons.</h2>
+    <p>Free to start. Bring your own resume. No spam.</p>
+    <a href="/auth/signup" class="btn btn-accent btn-lg">Get started <i class="bi bi-arrow-right"></i></a>
+</section>
+
+</main>
+
+<footer class="landing-footer">
+    <div class="landing-footer-inner">
+        <div>© 2026 Zephyr · A personal project</div>
+        <div class="flex gap-4">
+            <a href="https://github.com/franciscobarriga/zephyr-job-tracker" target="_blank" rel="noopener">GitHub</a>
+            <a href="/auth/login">Sign in</a>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
