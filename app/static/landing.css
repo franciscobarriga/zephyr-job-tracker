@@ -14,7 +14,7 @@ body.landing::before {
     width: 700px;
     height: 700px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(124, 58, 237, 0.18) 0%, rgba(124, 58, 237, 0) 65%);
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.13) 0%, rgba(37, 99, 235, 0) 65%);
     z-index: -1;
     pointer-events: none;
 }
@@ -26,7 +26,7 @@ body.landing::after {
     width: 700px;
     height: 700px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(244, 114, 182, 0.12) 0%, rgba(244, 114, 182, 0) 65%);
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.07) 0%, rgba(37, 99, 235, 0) 65%);
     z-index: -1;
     pointer-events: none;
 }
@@ -86,10 +86,7 @@ body.landing::after {
 .hero-accent {
     display: block;
     padding-bottom: 0.14em;
-    background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--accent);
 }
 .hero-sub {
     font-size: 17px;
@@ -260,11 +257,40 @@ body.landing::after {
 }
 .step p { margin: 0; color: var(--text-2); font-size: 14px; line-height: 1.55; }
 
+/* === Logo strip === */
+.logo-strip {
+    text-align: center;
+    padding: 4px 0 80px;
+}
+.logo-strip-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-faint);
+    font-weight: 600;
+    margin: 0 0 26px;
+}
+.logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 52px;
+    flex-wrap: wrap;
+}
+.logo-item {
+    height: 25px;
+    width: auto;
+    opacity: 0.5;
+    transition: opacity 150ms ease;
+}
+.logo-item:hover { opacity: 0.85; }
+@media (max-width: 640px) { .logo-row { gap: 32px; } .logo-item { height: 21px; } }
+
 /* === CTA strip === */
 .cta-strip {
     text-align: center;
     padding: 72px 24px;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(236, 72, 153, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 100%);
     border: 1px solid var(--accent-border);
     border-radius: var(--radius-xl);
     margin-bottom: 60px;
