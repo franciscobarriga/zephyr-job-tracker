@@ -1,0 +1,23 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+# New → Blueprint → pick this repo. Render reads this file.
+services:
+  - type: web
+    name: zephyr
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /auth/login
+    autoDeploy: true
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
