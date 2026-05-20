@@ -36,9 +36,7 @@ body.landing::after {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 26px 56px;
-    max-width: 1500px;
-    margin: 0 auto;
+    padding: 24px 48px;
     position: relative;
     z-index: 2;
 }
@@ -79,7 +77,7 @@ body.landing::after {
 .hero-text { max-width: 880px; margin: 0 auto; }
 .hero-title {
     font-size: clamp(40px, 6vw, 68px);
-    line-height: 1.05;
+    line-height: 1.15;
     font-weight: 700;
     letter-spacing: -0.03em;
     margin: 0 0 24px;
@@ -87,6 +85,7 @@ body.landing::after {
 }
 .hero-accent {
     display: block;
+    padding-bottom: 0.14em;
     background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
