@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from app.auth import supabase, supabase_admin
+from app.auth import supabase, supabase_admin, SUPABASE_URL, SUPABASE_ANON_KEY
 
 
 def _app_base_url(request: Request) -> str:
@@ -147,39 +147,12 @@ async def forgot_password(request: Request, email: str = Form(...)):
 
 @router.get("/reset-password", response_class=HTMLResponse)
 async def reset_password_page(request: Request):
-    """Renders a form. Supabase delivers the recovery token in the URL hash,
-    which only JS can read — page submits it back along with the new password."""
-    return templates.TemplateResponse(request, "reset_password.html")
-
-
-@router.post("/reset-password")
-async def reset_password(
-    request: Request,
-    access_token: str = Form(...),
-    refresh_token: str = Form(...),
-    password: str = Form(...),
-):
-    """Apply the new password using the recovery-token session."""
-    if len(password) < 6:
-        return templates.TemplateResponse(
-            request,
-            "reset_password.html",
-            {"error": "Password must be at least 6 characters."},
-            status_code=400,
-        )
-    try:
-        supabase.auth.set_session(access_token, refresh_token)
-        supabase.auth.update_user({"password": password})
-        supabase.auth.sign_out()
-    except Exception as exc:
-        return templates.TemplateResponse(
-            request,
-            "reset_password.html",
-            {"error": f"Reset failed: {exc}. The link may have expired — request a new one."},
-            status_code=400,
-        )
+    """Recovery happens entirely client-side via supabase-js: the browser
+    picks up the recovery session from the URL hash and calls updateUser().
+    Doing it server-side races against Supabase's single-use recovery
+    session ('session_id claim ... does not exist')."""
     return templates.TemplateResponse(
         request,
-        "login.html",
-        {"success": "Password updated. Sign in with your new password."},
+        "reset_password.html",
+        {"supabase_url": SUPABASE_URL, "supabase_anon_key": SUPABASE_ANON_KEY},
     )
