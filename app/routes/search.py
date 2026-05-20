@@ -11,8 +11,7 @@ from app.auth import get_current_user, supabase
 
 router = APIRouter()
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+from app.templating import templates
 
 
 @router.get("/", response_class=HTMLResponse)

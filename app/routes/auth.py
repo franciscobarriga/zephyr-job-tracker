@@ -17,8 +17,7 @@ def _app_base_url(request: Request) -> str:
 
 router = APIRouter()
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+from app.templating import templates
 
 
 @router.get("/login", response_class=HTMLResponse)

@@ -44,8 +44,7 @@ async def _run_scraper_inline(triggered_by_user_id: str):
     finally:
         _SCRAPE_STATE["running"] = False
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+from app.templating import templates
 
 
 

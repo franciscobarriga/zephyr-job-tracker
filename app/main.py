@@ -27,7 +27,7 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 # Templates and static files
 BASE_DIR = Path(__file__).resolve().parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+from app.templating import templates
 
 # Mount static files (CSS, JS, images)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")

@@ -13,8 +13,7 @@ from app.utils.cleanup import cleanup_total_for_user
 
 router = APIRouter()
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+from app.templating import templates
 
 
 def calculate_level(applied_count: int) -> tuple:

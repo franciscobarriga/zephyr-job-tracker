@@ -9,10 +9,10 @@ from pathlib import Path
 from app.auth import get_current_user, supabase
 from app.utils.resume_parser import parse_resume
 
+from app.templating import templates
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
-BASE_DIR = Path(__file__).resolve().parent.parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 _MAX_BYTES = 5 * 1024 * 1024  # 5 MB
 
