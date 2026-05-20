@@ -290,59 +290,71 @@ async def get_job_description(page, job_url):
         return None
 
 
+async def _analyze_one(job, description, resume_text):
+    """Run AI analysis on a single job's description and persist it."""
+    analysis = analyze_job(description)
+    update_data = {
+        "description": description,
+        "ai_summary": analysis.get("summary"),
+        "ai_requirements": analysis.get("requirements"),
+    }
+    if resume_text:
+        match = score_job_match(description, resume_text)
+        update_data["match_score"] = match["score"]
+        update_data["match_reasoning"] = match["reasoning"]
+    supabase.table("jobs").update(update_data).eq("id", job["id"]).execute()
+
+
 async def analyze_new_jobs(user_id, jobs_data):
-    """Visit each new job URL, run AI analysis, and score against user resume."""
+    """Run AI analysis on new jobs. Jobs that already carry a description
+    (Greenhouse/Lever) skip the Playwright fetch entirely."""
     if not jobs_data:
         return
 
-    # Fetch user's resume text for match scoring
     profile_resp = supabase.table("profiles").select("resume_text").eq("id", user_id).single().execute()
     resume_text = (profile_resp.data or {}).get("resume_text") or ""
 
     print(f"  🤖 Running AI analysis on {len(jobs_data)} new jobs...")
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context(
-            extra_http_headers={"Accept-Language": "en-US,en;q=0.9"},
-            user_agent=(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
-            ),
-        )
-        page = await context.new_page()
+    with_desc = [j for j in jobs_data if (j.get("description") or "").strip()]
+    needs_fetch = [j for j in jobs_data if not (j.get("description") or "").strip()]
+    analyzed = 0
 
-        analyzed = 0
-        for job in jobs_data:
-            try:
-                description = await get_job_description(page, job["url"])
-                if not description:
-                    print(f"    ⚠️  No description found for: {job['title'][:30]}")
+    # Jobs that already have a description (API-sourced) — no browser needed.
+    for job in with_desc:
+        try:
+            print(f"    📝 Analyzing (cached desc): {job['title'][:30]}...")
+            await _analyze_one(job, job["description"], resume_text)
+            analyzed += 1
+        except Exception as e:
+            print(f"    ⚠️  Error analyzing job: {e}")
+
+    # Jobs that need their description scraped (LinkedIn) — launch one browser.
+    if needs_fetch:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
+                extra_http_headers={"Accept-Language": "en-US,en;q=0.9"},
+                user_agent=(
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+                ),
+            )
+            page = await context.new_page()
+            for job in needs_fetch:
+                try:
+                    description = await get_job_description(page, job["url"])
+                    if not description:
+                        print(f"    ⚠️  No description found for: {job['title'][:30]}")
+                        continue
+                    print(f"    📝 Analyzing: {job['title'][:30]}...")
+                    await _analyze_one(job, description, resume_text)
+                    analyzed += 1
+                    await human_delay(1, 3)
+                except Exception as e:
+                    print(f"    ⚠️  Error analyzing job: {e}")
                     continue
-
-                print(f"    📝 Analyzing: {job['title'][:30]}...")
-                analysis = analyze_job(description)
-
-                update_data = {
-                    "description": description,
-                    "ai_summary": analysis.get("summary"),
-                    "ai_requirements": analysis.get("requirements"),
-                }
-
-                if resume_text:
-                    match = score_job_match(description, resume_text)
-                    update_data["match_score"] = match["score"]
-                    update_data["match_reasoning"] = match["reasoning"]
-
-                supabase.table("jobs").update(update_data).eq("id", job["id"]).execute()
-                analyzed += 1
-                await human_delay(1, 3)
-
-            except Exception as e:
-                print(f"    ⚠️  Error analyzing job: {e}")
-                continue
-
-        await browser.close()
+            await browser.close()
 
     print(f"  ✅ AI analysis complete: {analyzed} jobs analyzed")
 
@@ -506,24 +518,51 @@ async def scrape_linkedin_jobs(keywords, location, pages=1):
 
 
 async def scrape_for_user(user_id, config):
-    """Scrape jobs for a single user configuration"""
+    """Scrape jobs for a single user configuration across all selected boards."""
+    boards = config.get("boards") or ["linkedin"]
     print(f"\n👤 User: {user_id}")
     print(f"   Keywords: {config['keywords']}")
     print(f"   Location: {config['location']}")
     print(f"   Pages: {config['pages']}")
-    
-    # Scrape jobs
-    jobs = await scrape_linkedin_jobs(
-        config["keywords"],
-        config["location"],
-        config["pages"]
-    )
-    
+    print(f"   Boards: {', '.join(boards)}")
+
+    keywords = config["keywords"]
+    location = config["location"]
+    pages = config["pages"]
+
+    jobs = []
+
+    if "linkedin" in boards:
+        try:
+            li = await scrape_linkedin_jobs(keywords, location, pages)
+            print(f"  🔗 LinkedIn: {len(li)} jobs")
+            jobs.extend(li)
+        except Exception as e:
+            print(f"  ❌ LinkedIn failed: {e}")
+
+    if "greenhouse" in boards:
+        try:
+            from scrapers.greenhouse import scrape as scrape_greenhouse
+            gh = await scrape_greenhouse(keywords, location, pages)
+            print(f"  🌱 Greenhouse: {len(gh)} jobs")
+            jobs.extend(gh)
+        except Exception as e:
+            print(f"  ❌ Greenhouse failed: {e}")
+
+    if "lever" in boards:
+        try:
+            from scrapers.lever import scrape as scrape_lever
+            lv = await scrape_lever(keywords, location, pages)
+            print(f"  🎚️  Lever: {len(lv)} jobs")
+            jobs.extend(lv)
+        except Exception as e:
+            print(f"  ❌ Lever failed: {e}")
+
     if not jobs:
         print(f"  ⚠️  No jobs found")
         return 0
-    
-    print(f"  📦 Found {len(jobs)} jobs")
+
+    print(f"  📦 Found {len(jobs)} jobs total")
     
     # Save to database using Supabase client
     new_jobs = 0
@@ -540,7 +579,8 @@ async def scrape_for_user(user_id, config):
             if existing.data:
                 continue  # Skip duplicate
             
-            # Insert new job
+            # Insert new job. Greenhouse/Lever bring their own description;
+            # LinkedIn jobs have none yet (filled later by analyze_new_jobs).
             supabase.table("jobs").insert({
                 "user_id": user_id,
                 "title": job["title"],
@@ -550,6 +590,7 @@ async def scrape_for_user(user_id, config):
                 "job_hash": job["job_hash"],
                 "source": job["source"],
                 "status": "New",
+                "description": job.get("description"),
                 # New enhanced fields
                 "salary_min": job.get("salary_min"),
                 "salary_max": job.get("salary_max"),
@@ -571,7 +612,7 @@ async def scrape_for_user(user_id, config):
             # Get only the newly inserted jobs with their IDs
             new_job_list = []
             for job in jobs:
-                existing = supabase.table("jobs").select("id, title, url").eq("job_hash", job["job_hash"]).eq("user_id", user_id).eq("status", "New").execute()
+                existing = supabase.table("jobs").select("id, title, url, description").eq("job_hash", job["job_hash"]).eq("user_id", user_id).eq("status", "New").execute()
                 if existing.data:
                     new_job_list.append(existing.data[0])
 
@@ -597,7 +638,7 @@ async def main():
     try:
         # Get active search configs
         response = supabase.table("search_configs")\
-            .select("id, user_id, keywords, location, pages")\
+            .select("id, user_id, keywords, location, pages, boards")\
             .eq("is_active", True)\
             .execute()
         

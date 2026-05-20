@@ -59,6 +59,26 @@
                     </label>
                 </div>
             </div>
+            <div class="field mt-4">
+                <label class="label">Job boards <span class="label-hint">where Zephyr looks</span></label>
+                <div class="board-picker">
+                    <label class="board-option">
+                        <input type="checkbox" name="boards" value="linkedin" checked>
+                        <span><i class="bi bi-linkedin"></i> LinkedIn</span>
+                    </label>
+                    <label class="board-option">
+                        <input type="checkbox" name="boards" value="greenhouse">
+                        <span><i class="bi bi-tree"></i> Greenhouse</span>
+                    </label>
+                    <label class="board-option">
+                        <input type="checkbox" name="boards" value="lever">
+                        <span><i class="bi bi-sliders"></i> Lever</span>
+                    </label>
+                </div>
+                <div class="text-faint text-sm" style="margin-top:6px;">
+                    Greenhouse and Lever surface roles at well-known tech companies. LinkedIn covers everything else.
+                </div>
+            </div>
             <div class="mt-6">
                 <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Create search</button>
             </div>
@@ -90,6 +110,8 @@
                     <span class="mono">{{ config.pages }} pages</span>
                     {% if config.is_remote %}<span class="job-meta-sep">·</span><span>Remote</span>{% endif %}
                     {% if config.experience_level %}<span class="job-meta-sep">·</span><span>{{ config.experience_level }}</span>{% endif %}
+                    <span class="job-meta-sep">·</span>
+                    <span>{{ (config.boards or ['linkedin']) | join(', ') | title }}</span>
                 </div>
             </div>
             <div></div>
@@ -130,5 +152,23 @@
     transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
 }
 .suggestion-chip:hover { background: var(--accent-soft); color: var(--accent-hover); border-color: var(--accent-border); }
+
+.board-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+.board-option {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-2);
+    transition: background 80ms ease, border-color 80ms ease;
+}
+.board-option:has(input:checked) {
+    background: var(--accent-soft);
+    border-color: var(--accent-border);
+    color: var(--accent-hover);
+}
+.board-option input { accent-color: var(--accent); width: 14px; height: 14px; }
 </style>
 {% endblock %}

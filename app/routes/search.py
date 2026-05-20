@@ -42,11 +42,16 @@ async def create_search(
     is_remote: bool = Form(False),
     experience_level: str = Form(None),
     pages: int = Form(2),
+    boards: list[str] = Form(["linkedin"]),
     user = Depends(get_current_user)
 ):
     """Create new search configuration"""
-    
+
     try:
+        # Only allow known board names; always keep at least one.
+        allowed = {"linkedin", "greenhouse", "lever"}
+        selected = [b for b in boards if b in allowed] or ["linkedin"]
+
         supabase.table("search_configs").insert({
             "user_id": user["id"],
             "keywords": keywords,
@@ -54,6 +59,7 @@ async def create_search(
             "is_remote": is_remote,
             "experience_level": experience_level if experience_level else None,
             "pages": pages,
+            "boards": selected,
             "is_active": True
         }).execute()
         
