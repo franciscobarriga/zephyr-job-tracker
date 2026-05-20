@@ -36,37 +36,47 @@ body.landing::after {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 22px 40px;
-    max-width: 1200px;
+    padding: 26px 56px;
+    max-width: 1500px;
     margin: 0 auto;
     position: relative;
     z-index: 2;
 }
 .landing-brand {
-    display: flex; align-items: center; gap: 10px;
-    font-weight: 600; font-size: 16px;
+    display: flex; align-items: center; gap: 13px;
+    font-weight: 700; font-size: 22px;
     letter-spacing: -0.02em;
 }
-.landing-nav-right { display: flex; align-items: center; gap: 14px; }
+.landing-brand .brand-mark {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    font-size: 21px;
+}
+.landing-nav-right { display: flex; align-items: center; gap: 10px; }
 .landing-nav-link {
-    font-size: 14px; font-weight: 500;
+    font-size: 15.5px; font-weight: 500;
     color: var(--text-2);
-    padding: 8px 12px;
+    padding: 11px 18px;
     border-radius: var(--radius);
     transition: color 80ms ease, background 80ms ease;
 }
 .landing-nav-link:hover { color: var(--text); background: var(--bg-hover); }
+.landing-nav .btn {
+    font-size: 15.5px;
+    padding: 11px 22px;
+    border-radius: var(--radius-lg);
+}
 
 /* === Layout === */
 .landing-main {
-    max-width: 1200px;
+    max-width: 1500px;
     margin: 0 auto;
-    padding: 40px 40px 80px;
+    padding: 40px 56px 80px;
 }
 
 /* === Hero === */
-.hero { padding: 60px 0 80px; text-align: center; }
-.hero-text { max-width: 760px; margin: 0 auto; }
+.hero { padding: 72px 0 96px; text-align: center; }
+.hero-text { max-width: 880px; margin: 0 auto; }
 .hero-title {
     font-size: clamp(40px, 6vw, 68px);
     line-height: 1.05;
@@ -265,11 +275,11 @@ body.landing::after {
 /* === Footer === */
 .landing-footer {
     border-top: 1px solid var(--border);
-    padding: 24px 40px;
+    padding: 24px 56px;
     background: var(--bg-surface);
 }
 .landing-footer-inner {
-    max-width: 1200px;
+    max-width: 1500px;
     margin: 0 auto;
     display: flex;
     align-items: center;
